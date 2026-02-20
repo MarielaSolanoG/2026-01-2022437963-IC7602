@@ -1,4 +1,4 @@
-# Módulo 1 – Implementación de Servicios Web Internos
+# Implementación de Servicios Web Internos
 
 ## Objetivo
 

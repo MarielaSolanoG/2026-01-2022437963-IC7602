@@ -1,7 +1,8 @@
-# IC-7602 – Redes
-**Repositorio de proyectos – I Ciclo 2026**
+# IC-7602 – Redes  
+**I Ciclo 2026**
 
-Este repositorio contiene los proyectos desarrollados para el curso **IC-7602 Redes**.
+Repositorio oficial del curso **IC-7602 Redes**.  
+Aquí se almacenan todas las evaluaciones individuales y proyectos grupales desarrollados durante el semestre.
 
 ---
 
@@ -10,6 +11,15 @@ Este repositorio contiene los proyectos desarrollados para el curso **IC-7602 Re
 - **Mariela Solano Gómez**  
   Carné: 2022437963  
 
-- **Alejandra Delgado Pérez**
-  Carné:
+- **Alejandra Delgado Pérez**  
+  Carné: [completar]
 
+---
+
+## 📂 Estructura del repositorio
+
+- `evaluaciones_individuales/` → Lecturas, apuntes y tareas cortas  
+- `proyectos/` → Proyectos programados y proyecto opcional  
+- `recursos/` → Diagramas, evidencias y material de apoyo  
+
+---

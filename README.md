@@ -1,6 +1,15 @@
-# 2026-01-2022437963-IC7602
-Repositorio para los proyectos del curso IC-7602 Redes 
+# IC-7602 – Redes
+**Repositorio de proyectos – I Ciclo 2026**
 
-Integrantes del grupo:
-Mariela Solano Gómez 2022437963
-Alejandra Delgado Pérez
+Este repositorio contiene los proyectos desarrollados para el curso **IC-7602 Redes**.
+
+---
+
+## 👥 Integrantes del grupo
+
+- **Mariela Solano Gómez**  
+  Carné: 2022437963  
+
+- **Alejandra Delgado Pérez**
+  Carné:
+

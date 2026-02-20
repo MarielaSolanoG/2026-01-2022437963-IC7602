@@ -20,6 +20,5 @@ Aquí se almacenan todas las evaluaciones individuales y proyectos grupales desa
 
 - `evaluaciones_individuales/` → Lecturas, apuntes y tareas cortas  
 - `proyectos/` → Proyectos programados y proyecto opcional  
-- `recursos/` → Diagramas, evidencias y material de apoyo  
 
 ---

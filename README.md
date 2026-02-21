@@ -12,7 +12,7 @@ Aquí se almacenan todas las evaluaciones individuales y proyectos grupales desa
   Carné: 2022437963  
 
 - **Alejandra Delgado Pérez**  
-  Carné: [completar]
+  Carné: 2022104899
 
 ---
 

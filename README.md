@@ -12,8 +12,10 @@ Aquí se almacenan todas las evaluaciones individuales y proyectos grupales desa
   Carné: 2022437963  
 
 - **Alejandra Delgado Pérez**  
-  Carné: [completar]
+  Carné: 2022104899
 
+- **Joshua Obando Castro**
+  Carné: 2023130774
 ---
 
 ## 📂 Estructura del repositorio

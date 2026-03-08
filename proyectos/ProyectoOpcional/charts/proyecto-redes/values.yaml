@@ -1,0 +1,18 @@
+global:
+  namespacePublico: publico
+  namespacePrivado: privado
+
+apache1:
+  enabled: true
+
+apache2:
+  enabled: true
+
+ingress:
+  enabled: false
+
+router:
+  enabled: false
+
+asterisk:
+  enabled: false

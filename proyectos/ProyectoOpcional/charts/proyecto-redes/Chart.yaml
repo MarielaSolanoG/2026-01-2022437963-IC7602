@@ -1,0 +1,17 @@
+apiVersion: v2
+name: proyecto-redes
+description: Chart principal para automatizar el proyecto de redes
+type: application
+version: 0.1.0
+appVersion: "1.0"
+
+dependencies:
+  - name: apache1
+    version: 0.1.0
+    repository: "file://../apache1"
+    condition: apache1.enabled
+
+  - name: apache2
+    version: 0.1.0
+    repository: "file://../apache2"
+    condition: apache2.enabled

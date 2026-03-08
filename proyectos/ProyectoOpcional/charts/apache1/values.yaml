@@ -83,7 +83,7 @@ httpRoute:
   parentRefs:
   - name: gateway
     sectionName: http
-    # namespace: default
+    namespace: privado
   # Hostnames matching HTTP header.
   hostnames:
   - chart-example.local

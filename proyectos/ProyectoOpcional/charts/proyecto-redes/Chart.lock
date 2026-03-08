@@ -1,0 +1,9 @@
+dependencies:
+- name: apache1
+  repository: file://../apache1
+  version: 0.1.0
+- name: apache2
+  repository: file://../apache2
+  version: 0.1.0
+digest: sha256:2806f3326b57c432d6aee51dce06990b7461ffcebfcb82d5e3a69c98c451aed6
+generated: "2026-03-08T00:50:19.2646155-06:00"

@@ -16,6 +16,9 @@ Aquí se almacenan todas las evaluaciones individuales y proyectos grupales desa
 
 - **Joshua Obando Castro**
   Carné: 2023130774
+
+- **Roilin Navarro Vargas**
+  Carnet: 2023213657
 ---
 
 ## 📂 Estructura del repositorio

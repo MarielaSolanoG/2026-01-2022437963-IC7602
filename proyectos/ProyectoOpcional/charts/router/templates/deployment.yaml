@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "apache2.fullname" . }}
+  name: {{ include "router.fullname" . }}
   labels:
-    {{- include "apache2.labels" . | nindent 4 }}
+    {{- include "router.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "apache2.selectorLabels" . | nindent 6 }}
+      {{- include "router.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "apache2.labels" . | nindent 8 }}
+        {{- include "router.labels" . | nindent 8 }}
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -27,7 +27,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "apache2.serviceAccountName" . }}
+      serviceAccountName: {{ include "router.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -38,12 +38,33 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: APACHE1_DNS
+              value: "apache1.privado.svc.cluster.local"
+            - name: APACHE2_DNS
+              value: "apache2.privado.svc.cluster.local"
+            - name: INGRESS_DNS
+              value: "ingress-nginx-controller.publico.svc.cluster.local"
+            - name: ASTERISK_DNS
+              value: "asterisk.privado.svc.cluster.local"
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: 80
               protocol: TCP
+            - name: apache1
+              containerPort: 8080
+              protocol: TCP
+            - name: apache2
+              containerPort: 8081
+              protocol: TCP
+            - name: sip-tcp
+              containerPort: 5601
+              protocol: TCP
+            - name: sip-udp
+              containerPort: 5601
+              protocol: UDP
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

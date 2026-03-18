@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "router.fullname" . }}
+  labels:
+    {{- include "router.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+  - name: apache1
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  - name: apache2
+    protocol: TCP
+    port: 8081
+    targetPort: 8081
+  - name: sip-tcp
+    protocol: TCP
+    port: 5601
+    targetPort: 5601
+  - name: sip-udp
+    protocol: UDP
+    port: 5601
+    targetPort: 5601
+  selector:
+    {{- include "router.selectorLabels" . | nindent 4 }}

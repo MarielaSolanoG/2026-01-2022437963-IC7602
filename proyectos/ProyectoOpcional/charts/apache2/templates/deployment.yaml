@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "apache2.fullname" . }}
+  namespace: {{ .Values.global.namespacePrivado }}
   labels:
     {{- include "apache2.labels" . | nindent 4 }}
 spec:

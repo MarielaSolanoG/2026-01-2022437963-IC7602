@@ -9,7 +9,7 @@ replicaCount: 1
 image:
   repository: router-custom
   tag: latest
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 service:
   type: NodePort
 

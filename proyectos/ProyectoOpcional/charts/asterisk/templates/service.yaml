@@ -1,0 +1,19 @@
+# este service resuleve el problema del cambio de IP,
+# este service siempre tiene la misma direccion dentro del cluster para cuando el Router pregunta
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: asterisk
+  namespace: privado
+spec:
+  type: ClusterIP #solo el router puede hablar con asterisk
+  selector:
+    app: asterisk #conecta el service con el Deployment
+  ports:
+    - name: sip-tcp
+      port: 5060
+      protocol: TCP
+    - name: sip-udp
+      port: 5060
+      protocol: UDP

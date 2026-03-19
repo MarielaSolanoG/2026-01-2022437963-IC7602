@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asterisk
+  namespace: privado
+spec:
+  replicas: 1 # solo queremos una instancia
+  selector:
+    matchLabels:
+      app: asterisk
+  template:
+    metadata:
+      labels:
+        app: asterisk
+    spec:
+      initContainers:
+        - name: copy-config
+          image: andrius/asterisk
+          command: ['sh', '-c', 'cp -r /etc/asterisk/* /config-out/ && cp /config/pjsip.conf /config-out/pjsip.conf && cp /config/extensions.conf /config-out/extensions.conf']
+          volumeMounts:
+            - name: asterisk-config
+              mountPath: /config
+            - name: asterisk-etc
+              mountPath: /config-out
+      containers:
+        - name: asterisk
+          image: andrius/asterisk
+          ports:
+            # el puerto 5060 que usa el protocolo SIP
+            - containerPort: 5060
+              protocol: TCP
+            - containerPort: 5060
+              protocol: UDP
+          volumeMounts:
+          #el disco montalo en la carpeta, que es donde Asterisk busca sus archivos de configuracion
+            - name: asterisk-etc
+              mountPath: /etc/asterisk
+      volumes:
+      #"tengo un congifmap, tratalo como si fuera un disco"
+        - name: asterisk-config
+          configMap:
+            name: asterisk-config
+        - name: asterisk-etc
+          emptyDir: {}

@@ -53,7 +53,22 @@ Componentes implementados:
 - Cliente → **Router:8081** → Apache2
 
 **3) Telefonía**
-- Cliente → **Router:5601 TCP UDP** 
+- Cliente → **Router:5601 TCP UDP**
+
+### Despliegue automatizado completo
+
+```bash
+helm install proyecto ./charts/proyecto-redes
+```
+Este comando realiza automáticamente:
+
+- Creación de namespaces (`publico` y `privado`)
+- Despliegue de servicios internos (Apache1, Apache2, Asterisk)
+- Despliegue del router con reglas NAT
+- Instalación del Ingress Controller (NGINX)
+- Configuración del recurso Ingress
+- Conectividad entre todos los componentes mediante DNS interno
+---
 
 ## Requisitos del entorno
 

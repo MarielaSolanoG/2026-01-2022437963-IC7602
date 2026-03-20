@@ -9,10 +9,20 @@ apache2:
   enabled: true
 
 ingress:
-  enabled: false
+  enabled: true
 
 router:
-  enabled: false
+  enabled: true
 
 asterisk:
-  enabled: false
+  enabled: true
+
+ingressController:
+  enabled: true
+
+ingress-nginx:
+  enabled: true
+  namespaceOverride: publico
+  controller:
+    admissionWebhooks:
+      enabled: false

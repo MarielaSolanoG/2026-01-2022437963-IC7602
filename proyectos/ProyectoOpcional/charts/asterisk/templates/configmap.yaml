@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: asterisk-config
+  namespace: privado
+data:
+  #definimos los 2 ususarios
+  #host = dynamic hace que pueda conectarse desde cualquier IP
+  pjsip.conf: |
+    [transport-udp]
+    type=transport
+    protocol=udp
+    bind=0.0.0.0:5060
+
+    [transport-tcp]
+    type=transport
+    protocol=tcp
+    bind=0.0.0.0:5060
+
+    [1001]
+    type=endpoint
+    context=default
+    disallow=all
+    allow=ulaw
+    auth=auth1001
+    aors=1001
+
+    [auth1001]
+    type=auth
+    auth_type=userpass
+    password=pass1001
+    username=1001
+
+    [1001]
+    type=aor
+    max_contacts=1
+
+    [1002]
+    type=endpoint
+    context=default
+    disallow=all
+    allow=ulaw
+    auth=auth1002
+    aors=1002
+
+    [auth1002]
+    type=auth
+    auth_type=userpass
+    password=pass1002
+    username=1002
+
+    [1002]
+    type=aor
+    max_contacts=1
+
+  extensions.conf: |  #define que pasa cuando alguien marca un #
+    [default]
+    exten => 1001,1,Dial(PJSIP/1001)
+    exten => 1002,1,Dial(PJSIP/1002)

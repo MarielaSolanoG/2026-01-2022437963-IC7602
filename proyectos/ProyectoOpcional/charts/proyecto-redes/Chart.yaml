@@ -15,3 +15,18 @@ dependencies:
     version: 0.1.0
     repository: "file://../apache2"
     condition: apache2.enabled
+  
+  - name: router
+    version: 0.1.0
+    repository: "file://../router"
+    condition: router.enabled
+
+  - name: asterisk
+    version: 0.1.0
+    repository: "file://../asterisk"
+    condition: asterisk.enabled
+
+  - name: ingress-nginx
+    version: 4.12.1
+    repository: "https://kubernetes.github.io/ingress-nginx"
+    condition: ingressController.enabled

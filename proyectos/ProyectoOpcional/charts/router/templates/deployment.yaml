@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "router.fullname" . }}
+  namespace: {{ .Values.global.namespacePublico }}
+
   labels:
     {{- include "router.labels" . | nindent 4 }}
 spec:
@@ -42,11 +44,11 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: APACHE1_DNS
-              value: "apache1.privado.svc.cluster.local"
+              value: "proyecto-apache1.privado.svc.cluster.local"
             - name: APACHE2_DNS
-              value: "apache2.privado.svc.cluster.local"
+              value: "proyecto-apache2.privado.svc.cluster.local"
             - name: INGRESS_DNS
-              value: "ingress-nginx-controller.publico.svc.cluster.local"
+              value: "proyecto-ingress-nginx-controller.publico.svc.cluster.local"
             - name: ASTERISK_DNS
               value: "asterisk.privado.svc.cluster.local"
           ports:

@@ -31,9 +31,9 @@ echo "[Router] Reglas antiguas limpiadas"
 # ========================================
 # Paso 3: Resolver DNSs a IPs
 # ========================================
-APACHE1_DNS="${APACHE1_DNS:-apache1.privado.svc.cluster.local}"
-APACHE2_DNS="${APACHE2_DNS:-apache2.privado.svc.cluster.local}"
-INGRESS_DNS="${INGRESS_DNS:-ingress-nginx-controller.publico.svc.cluster.local}"
+APACHE1_DNS="${APACHE1_DNS:-proyecto-apache1.privado.svc.cluster.local}"
+APACHE2_DNS="${APACHE2_DNS:-proyecto-apache2.privado.svc.cluster.local}"
+INGRESS_DNS="${INGRESS_DNS:-proyecto-ingress-nginx-controller.publico.svc.cluster.local}"
 ASTERISK_DNS="${ASTERISK_DNS:-asterisk.privado.svc.cluster.local}"
 
 # Resolver a IP (ClusterIP)

@@ -10,15 +10,29 @@
 - Roilin Navarro Vargas  
 
 ## Tabla de contenidos
-1. [Introducción](#introducción)  
-2. [Arquitectura requerida](#arquitectura-requerida)  
-3. [Requisitos del entorno](#requisitos-del-entorno)  
-4. [Estructura del repositorio](#estructura-del-repositorio)  
-5. [Instalación y ejecución paso a paso](#instalación-y-ejecución-paso-a-paso)  
-6. [Pruebas realizadas (reproducibles)](#pruebas-realizadas-reproducibles)  
-7. [Problemas encontrados y solución](#problemas-encontrados-y-solución)   
-8. [Recomendaciones ](#recomendaciones-mínimo-10)  
-9. [Conclusiones ](#conclusiones-mínimo-10)  
+- [Proyecto Opcional — IC7602 Redes (2026-01)](#proyecto-opcional--ic7602-redes-2026-01)
+  - [Tabla de contenidos](#tabla-de-contenidos)
+  - [Introducción](#introducción)
+  - [Arquitectura requerida](#arquitectura-requerida)
+    - [Namespaces](#namespaces)
+    - [Flujo esperado](#flujo-esperado)
+    - [Despliegue automatizado completo](#despliegue-automatizado-completo)
+  - [Requisitos del entorno](#requisitos-del-entorno)
+    - [Requisitos mínimos](#requisitos-mínimos)
+    - [Herramientas](#herramientas)
+    - [Verificación rápida (PowerShell)](#verificación-rápida-powershell)
+  - [Estructura del repositorio](#estructura-del-repositorio)
+  - [Instalación y ejecución paso a paso](#instalación-y-ejecución-paso-a-paso)
+  - [Pruebas realizadas](#pruebas-realizadas)
+    - [Prueba 0 — Estado general](#prueba-0--estado-general)
+    - [Prueba 1 — Apache1 (port-forward)](#prueba-1--apache1-port-forward)
+    - [Prueba 2 — Apache2 (port-forward)](#prueba-2--apache2-port-forward)
+    - [Prueba 3 — Ingress por rutas (si el entorno lo permite)](#prueba-3--ingress-por-rutas-si-el-entorno-lo-permite)
+    - [Prueba 4 — Router, se hace dentro del cluster.](#prueba-4--router-se-hace-dentro-del-cluster)
+    - [Prueba 5 — Router: verificación técnica (iptables)](#prueba-5--router-verificación-técnica-iptables)
+  - [Problemas encontrados y solución](#problemas-encontrados-y-solución)
+  - [Recomendaciones](#recomendaciones)
+  - [Conclusiones (mínimo 10)](#conclusiones-mínimo-10)
  
 
 ## Introducción
@@ -133,92 +147,26 @@ kubectl get nodes
 Esperado: 1 nodo Ready.
 ```
 
-2) Crear namespaces
-```
-cd proyectos/ProyectoOpcional
-kubectl apply -f k8s/namespaces.yaml
-kubectl get ns
-Esperado: publico y privado.
-```
+2) Preparación del entorno
 
-3) Apache1 y Apache2 (namespace privado)
+Antes de desplegar el sistema, es necesario construir las imágenes Docker de los servicios:
 
-- 3.1 Construir imágenes Docker
-```
-cd charts/apache1/app
-docker build -t apache1-custom:latest .
-
-cd ../../apache2/app
-docker build -t apache2-custom:latest .
-
-docker images | findstr apache
+```bash
+docker build -t apache1-custom:latest ./charts/apache1/app
+docker build -t apache2-custom:latest ./charts/apache2/app
+docker build -t router-custom:latest ./charts/router/app
 ```
 
-- 3.2 Instalar con Helm
-```
-cd ../../..
-helm upgrade --install apache1 charts/apache1 -n privado --create-namespace
-helm upgrade --install apache2 charts/apache2 -n privado --create-namespace
+3) Despliegue automatizado con Helm
+
+El despliegue completo del sistema se realiza mediante los siguientes comandos:
+
+```bash
+helm dependency build ./charts/proyecto-redes
+helm install proyecto ./charts/proyecto-redes
 ```
 
-- 3.3 Verificación
-```
-kubectl get deploy,svc,pods -n privado
-Esperado: 2 deployments 1/1 y 2 services ClusterIP en puerto 80.
-```
-
-4) Ingress Controller (NGINX)
-
-- 4.1 Instalar ingress-nginx (namespace publico)
-```
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo update
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx -n publico --create-namespace
-```
-
-4.2 Verificación
-```
-kubectl get pods -n publico
-kubectl get svc -n publico
-
-Esperado: ingress-nginx-controller en Running.
-```
-
-4.3 Aplicar reglas Ingress (en privado)
-```
-kubectl apply -f k8s/ingress.yaml
-kubectl get ingress -n privado
-
-Esperado: apache-ingress creado.
-```
-
-5) Router NAT (iptables) 
-
-- 5.1 Construir imagen del router
-```
-cd charts/router/app
-docker build -t router-custom:latest .
-docker images | findstr router
-cd ../../..
-```
-- 5.2 Instalar router con Helm (namespace publico)
-```
-helm upgrade --install router charts/router -n publico --create namespace
-```
-
-- 5.3 Verificación
-```
-kubectl get pods -n publico -l app.kubernetes.io/name=router
-kubectl describe svc -n publico router
-
-Esperado: Service router tipo NodePort con 80, 8080, 8081, 5601 TCP/UDP.
-```
-
-
----
-
-## Pruebas realizadas 
-
+## Pruebas realizadas
 
 > Nota importante (Windows + Docker Desktop + kind):  
 > A veces los NodePorts no son accesibles desde Windows por temas de red o WSL o Docker.  
@@ -230,23 +178,49 @@ kubectl get pods -A
 kubectl get svc -A
 kubectl get ingress -A
 ```
-Prueba 1 — Apache1 (port-forward)
+
+<p align="center">
+<img src="imagenes/prueba0.png" alt="" width="400">
+</p>
+
+<p align="center">
+<img src="imagenes/prueba0.1.png" alt="" width="400">
+</p>
+
+
+### Prueba 1 — Apache1 (port-forward)
 ```
-kubectl port-forward -n privado svc/apache1 8080:80
+kubectl port-forward -n privado svc/proyecto-apache1 8080:80
 
 Abrir: http://localhost:8080
 Esperado: Hola Apache1
 ```
 
-Prueba 2 — Apache2 (port-forward)
+<p align="center">
+<img src="imagenes/prueba1.png" alt="" width="400">
+</p>
+
+<p align="center">
+<img src="imagenes/prueba1.0.png" alt="" width="400">
+</p>
+
+### Prueba 2 — Apache2 (port-forward)
 ```
-kubectl port-forward -n privado svc/apache2 8081:80
+kubectl port-forward -n privado svc/proyecto-apache2 8081:80
 
 Abrir: http://localhost:8081
 Esperado: Hola Apache2
 ```
 
-Prueba 3 — Ingress por rutas (si el entorno lo permite)
+<p align="center">
+<img src="imagenes/prueba2.png" alt="" width="400">
+</p>
+
+<p align="center">
+<img src="imagenes/prueba2.0.png" alt="" width="400">
+</p>
+
+### Prueba 3 — Ingress por rutas (si el entorno lo permite)
 ```
 Probar:
 
@@ -261,9 +235,17 @@ Esperado:
 /Apache2 → Hola Apache2
 ```
 
+<p align="center">
+<img src="imagenes/prueba3.png" alt="" width="400">
+</p>
+
+<p align="center">
+<img src="imagenes/prueba3.0.png" alt="" width="400">
+</p>
+
 > Si no funciona directo por localhost, usar Prueba 4, la cual se hace dentro del cluster, que es la más confiable.
 
-Prueba 4 — Router, se hace dentro del cluster. 
+### Prueba 4 — Router, se hace dentro del cluster. 
 ```
 - 4.1 Crear un pod temporal con curl
 
@@ -293,9 +275,11 @@ Y para salir:
 
 exit
 ```
-Prueba 5 — Router: verificación técnica (iptables)
+
+### Prueba 5 — Router: verificación técnica (iptables)
+
 ```
-kubectl exec -it -n publico deployment/router -- bash
+kubectl exec -it -n publico deployment/proyecto-router -- bash
 
 Dentro:
 
@@ -309,6 +293,10 @@ exit
 
 Esperado: reglas DNAT + MASQUERADE e ip_forward = 1.
 ```
+
+<p align="center">
+<img src="imagenes/prueba5.png" alt="" width="400">
+</p>
 
 ---
 
@@ -349,7 +337,7 @@ Esperado: reglas DNAT + MASQUERADE e ip_forward = 1.
 10. Tener comandos de limpieza para reiniciar el ambiente si algo se rompe.
 11. Usar pruebas reproducibles con “resultado esperado” claro.
 12. Guardar evidencias (capturas/salidas) de las pruebas principales.
-Conclusiones (mínimo 10)
+
 ## Conclusiones (mínimo 10)
 
 1. Kubernetes permite separar componentes claramente usando namespaces.
@@ -364,6 +352,3 @@ Conclusiones (mínimo 10)
 10. La documentación y pruebas reproducibles son clave para la evaluación, no solo el código.
 11. La arquitectura es ampliable: se pueden sumar más servicios sin rehacer todo.
 12. Entender PREROUTING/OUTPUT/POSTROUTING facilita depurar problemas de NAT.
-Estado de completitud
-## Estado de completitud
-

@@ -1,0 +1,136 @@
+# Tarea Corta 1
+
+Tecnológico de Costa Rica
+Escuela de Ingeniería en Computación
+Bases de Datos II (IC 4302)
+Primer Semestre 2026
+
+## 1. Objetivo General
+
+➔ Implementar un analizador de espectros sencillo para audio.
+
+## 2. Objetivos Específicos
+
+➔ Profundizar en los conceptos de señales y ondas mediante el uso de módulos de software que
+implementan la transformada de Fourier.
+➔ Graficar señales de audio en el dominio del tiempo y en el dominio de la frecuencia.
+➔ Extraer armónicos específicos para generar tonos de audio.
+
+## 3. Datos Generales
+
+➔ El valor de la tarea es: 10 %
+➔ La tarea debe ser implementada de forma individual o en grupos de máximo 5 personas.
+➔ La fecha de entrega es viernes 27 de marzo del 2026 antes de las 11  59 pm.
+➔ Cualquier indicio de copia será calificado con una nota de 0 y será procesado de acuerdo con el
+reglamento. La copia incluye código/configuraciones que se puede encontrar en Internet y que sea utilizado
+parcial o totalmente sin el debido reconocimiento al autor.
+➔ La revisión es realizada de forma virtual mediante citas en las cuáles todos los y las integrantes del grupo
+➔ Se debe incluir documentación con instrucciones claras para ejecutar el proyecto.
+➔ Se espera que todos y todas las integrantes del grupo entiendan la implementación suministrada.
+➔ Se deben seguir buenas prácticas de programación en el caso de que apliquen. Por ejemplo,
+documentación interna y externa, estándares de código, diagramas de arquitectura, diagramas de flujo,
+
+
+pruebas unitarias son algunas de las buenas prácticas que se esperan de un estudiante de Ingeniería en
+Computación.
+➔ El lenguaje de implementación, en caso de ser requerido y no especificado por el profesor, deberá ser
+seleccionado por cada grupo y debe quedar debidamente documentado. No se permite el uso de Python.
+➔ Toda documentación debe ser implementada en Markdown.
+➔ En caso de no entregar documentación se obtendrá una nota de 0.
+➔ El email de entrega debe contener una copia del proyecto en formato tar.gz y un link al repositorio dónde
+se encuentra almacenado, debe seguir los lineamientos en el programa de curso.
+➔ Los grupos de trabajo deben autogestionarse; la persona facilitadora del curso no es responsable si un
+miembro del equipo no realiza su trabajo.
+➔ En consultas presenciales, por correo electrónico o por Telegram, como mínimo se debe haber leído
+sobre el tema y haber intentado comprenderlo. Las consultas deben ser concretas y se debe demostrar
+que se intentó resolver el problema en cuestión.
+
+## 4. Descripción
+
+Cada grupo deberá implementar una aplicación llamada Autrum, la cual incluye los siguientes
+componentes:
+
+### Analizador
+
+Toma señales de audio en streaming (captura de micrófono) o en batch (archivos WAV) y deberá:
+➔ Almacenar el audio en caso de ser streaming. El usuario debe poder indicar cuándo iniciar, detener,
+continuar y finalizar la captura.
+➔ Graficar la señal en el dominio del tiempo.
+➔ Calcular su transformada de Fourier utilizando algún módulo de software disponible.
+➔ Graficar en tiempo real los componentes de frecuencia obtenidos mediante la transformada de Fourier,
+permitiendo visualizar simultáneamente los gráficos en el dominio del tiempo y en el dominio de la
+frecuencia.
+➔ Generar un archivo .atm (Autrum File) que contenga:
+el audio original
+los datos utilizados para generar los gráficos en el dominio de la frecuencia.
+
+### Reproductor
+
+
+Toma archivos con extensión .atm y permite:
+➔ Reproducir el audio simultáneamente con los gráficos en el dominio del tiempo y en el dominio de la
+frecuencia.
+➔ El usuario podrá detener, cancelar y reanudar la reproducción en cualquier momento.
+➔ Explorar los gráficos mediante zoom in / zoom out.
+
+### Comparador
+
+Toma un archivo con extensión .atm previamente generado con el Analizador (idealmente una palabra o
+frase).
+El usuario debe pronunciar mediante el micrófono una palabra o frase que se sabe se encuentra en ese
+archivo, y el sistema deberá aproximar en qué parte del audio se encuentra.
+Una vez encontrado:
+➔ Se debe reproducir el audio desde ese punto.
+➔ Se debe mostrar el nivel de confianza de la coincidencia (0–100%).
+La comparación debe realizarse en dos etapas:
+➔ Comparación por armónicos
+➔ Comparación por potencia
+Junto con la aplicación, se debe entregar un documento en formato Markdown (máximo 4 páginas) que,
+mediante el uso de la aplicación Autrum (gráficos en el dominio del tiempo y de la frecuencia), lo estudiado
+en clase y las secciones del libro Tanenbaum, A. Computer Networks (4ta edición):
+➔ Bases teóricas para la comunicación de datos
+➔ Medios de transmisión guiados
+➔ Medios de transmisión inalámbrica
+permita responder las siguientes preguntas:
+➔ ¿Por qué las voces de los integrantes son diferentes?
+➔ ¿Por qué la comparación de voces es tan poco exacta mediante armónicos?
+
+## 5. Documentación
+
+La documentación debe incluir al menos:
+➔ Guía de instalación y uso de la tarea: se debe explicar en detalle cómo ejecutarla y cómo utilizarla.
+➔ Conclusiones y recomendaciones de la tarea corta.
+
+
+## 6. Recomendaciones
+
+➔ Realicen peer-review/checkpoints semanales y no esperen hasta el último momento para integrar su
+aplicación.
+➔ Crear un repositorio de GitHub e invitar al profesor.
+➔ Realizar commits y push regulares.
+➔ Generar tonos en frecuencias específicas y reproducirlos en otro dispositivo para validar la funcionalidad
+del proyecto.
+Por ejemplo, utilizar un tono de 400 Hz o 4000 Hz, como se explicó en clase.
+➔ Al trabajar con audios, grabar o utilizar archivos WAV originales.
+➔ Realizar pruebas con sonidos de instrumentos musicales.
+
+## 7. Entregables
+
+➔ Documentación.
+➔ Aplicación Autrum.
+➔ Documento con la respuesta a las preguntas:
+¿Por qué las voces de los integrantes son diferentes?
+¿Por qué la comparación de voces es tan poco exacta mediante armónicos?
+
+## 8. Evaluación
+
+```
+Rubro Valor
+Autrum Analizador 30 %
+Autrum Comparador 30 %
+Autrum Reproductor 10 %
+Documentación 10 %
+Documento con la respuesta a las preguntas ¿Por qué las voces de los integrantes son
+diferentes? y ¿Por qué la comparación de voces es tan poco exacta mediante armónicos?^20 %
+```
+

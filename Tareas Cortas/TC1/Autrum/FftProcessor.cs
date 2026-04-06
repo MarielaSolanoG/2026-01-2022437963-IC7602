@@ -45,6 +45,48 @@ namespace Autrum
             };
         }
 
+        public SpectrumData ProcessSegment(float[] audioSamples, int startIndex, int size = FFT_SIZE)
+        {
+            if (audioSamples == null || audioSamples.Length == 0)
+                return new SpectrumData { Frequencies = new float[0], Magnitudes = new float[0] };
+
+            if (startIndex < 0 || startIndex >= audioSamples.Length)
+                return new SpectrumData { Frequencies = new float[0], Magnitudes = new float[0] };
+
+            float[] segment = new float[size];
+
+            int available = audioSamples.Length - startIndex;
+            int copyLength = Math.Min(size, available);
+
+            Array.Copy(audioSamples, startIndex, segment, 0, copyLength);
+
+            // Si copyLength < size, lo demás queda en 0 automáticamente
+
+            float[] windowed = ApplyHannWindow(segment, size);
+            Complex[] fftResult = PerformFFT(windowed);
+
+            float[] frequencies = new float[fftResult.Length / 2];
+            float[] magnitudes = new float[fftResult.Length / 2];
+
+            for (int i = 0; i < frequencies.Length; i++)
+            {
+                frequencies[i] = (i * SAMPLE_RATE) / fftResult.Length;
+
+                float magnitude = (float)Math.Sqrt(
+                    fftResult[i].Real * fftResult[i].Real +
+                    fftResult[i].Imaginary * fftResult[i].Imaginary
+                );
+
+                magnitudes[i] = 20 * (float)Math.Log10(magnitude + 1e-10f);
+            }
+
+            return new SpectrumData
+            {
+                Frequencies = frequencies,
+                Magnitudes = magnitudes
+            };
+        }
+
         private float[] ApplyHannWindow(float[] samples, int size)
         {
             float[] windowed = new float[size];

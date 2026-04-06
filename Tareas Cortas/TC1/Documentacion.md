@@ -13,43 +13,47 @@
 
 ## Tabla de contenidos
 
-- [1. Introducción](#1-introducción)
-- [2. Objetivos](#2-objetivos)
-  - [2.1 Objetivo General](#21-objetivo-general)
-  - [2.2 Objetivos Específicos](#22-objetivos-específicos)
-- [3. Descripción del Sistema](#3-descripción-del-sistema)
-  - [3.1 Analizador](#31-analizador)
-  - [3.2 Reproductor (Playback)](#32-reproductor-playback)
-  - [3.3 Comparador](#33-comparador)
-- [4. Fundamentos Teóricos](#4-fundamentos-teóricos)
-  - [4.1 Dominio del Tiempo](#41-dominio-del-tiempo)
-  - [4.2 Dominio de la Frecuencia](#42-dominio-de-la-frecuencia)
-  - [4.3 Transformada de Fourier (FFT)](#43-transformada-de-fourier-fft)
-- [5. Implementación Técnica](#5-implementación-técnica)
-  - [5.1 Procesamiento de Audio](#51-procesamiento-de-audio)
-  - [5.2 FFT](#52-fft)
-  - [5.3 Búsqueda Temporal](#53-búsqueda-temporal)
-- [6. Métricas de Comparación](#6-métricas-de-comparación)
-  - [6.1 Similitud Armónica](#61-similitud-armónica)
-  - [6.2 Similitud de Potencia](#62-similitud-de-potencia)
-  - [6.3 Similitud General](#63-similitud-general)
-- [7. Pruebas Realizadas](#7-pruebas-realizadas)
-  - [7.1 Pruebas con Voz](#71-pruebas-con-voz)
-  - [7.2 Pruebas con Tonos (400 Hz y 4000 Hz)](#72-pruebas-con-tonos-400-hz-y-4000-hz)
-  - [7.3 Pruebas con Instrumentos Musicales](#73-pruebas-con-instrumentos-musicales)
-  - [7.4 Observaciones](#74-observaciones)
-- [8. Resultados](#8-resultados)
-- [9. Limitaciones](#9-limitaciones)
-- [10. Conclusiones](#10-conclusiones)
-- [11. Respuestas](#11-respuestas)
-- [12. Recomendaciones](#12-recomendaciones)
-- [13. Repositorio](#13-repositorio)
-- [14. Guía de Ejecución del Proyecto](#14-guía-de-ejecución-del-proyecto)
-  - [14.1 Requisitos Previos](#141-requisitos-previos)
-  - [14.2 Instalación y Compilación](#142-instalación-y-compilación)
-  - [14.3 Ejecución](#143-ejecución)
-  - [14.4 Solución de Problemas](#144-solución-de-problemas)
-  - [14.5 Tecnologías Utilizadas](#145-tecnologías-utilizadas)
+- [Autrum - Sistema de Análisis y Comparación de Audio](#autrum---sistema-de-análisis-y-comparación-de-audio)
+  - [Tabla de contenidos](#tabla-de-contenidos)
+  - [1. Introducción](#1-introducción)
+  - [2. Objetivos](#2-objetivos)
+    - [2.1 Objetivo General](#21-objetivo-general)
+    - [2.2 Objetivos Específicos](#22-objetivos-específicos)
+  - [3. Descripción del Sistema](#3-descripción-del-sistema)
+    - [3.1 Analizador](#31-analizador)
+    - [3.2 Reproductor (Playback)](#32-reproductor-playback)
+    - [3.3 Comparador](#33-comparador)
+  - [4. Fundamentos Teóricos](#4-fundamentos-teóricos)
+    - [4.1 Dominio del Tiempo](#41-dominio-del-tiempo)
+    - [4.2 Dominio de la Frecuencia](#42-dominio-de-la-frecuencia)
+    - [4.3 Transformada de Fourier (FFT)](#43-transformada-de-fourier-fft)
+  - [5. Implementación Técnica](#5-implementación-técnica)
+    - [5.1 Procesamiento de Audio](#51-procesamiento-de-audio)
+    - [5.2 FFT](#52-fft)
+    - [5.3 Búsqueda Temporal](#53-búsqueda-temporal)
+  - [6. Métricas de Comparación](#6-métricas-de-comparación)
+    - [6.1 Similitud Armónica](#61-similitud-armónica)
+    - [6.2 Similitud de Potencia](#62-similitud-de-potencia)
+    - [6.3 Similitud General](#63-similitud-general)
+  - [7. Pruebas Realizadas](#7-pruebas-realizadas)
+    - [7.1 Pruebas con Voz](#71-pruebas-con-voz)
+    - [7.2 Pruebas con Tonos (400 Hz y 4000 Hz)](#72-pruebas-con-tonos-400-hz-y-4000-hz)
+    - [7.3 Pruebas con Instrumentos Musicales](#73-pruebas-con-instrumentos-musicales)
+    - [7.4 Observaciones](#74-observaciones)
+  - [8. Resultados](#8-resultados)
+  - [9. Limitaciones](#9-limitaciones)
+  - [10. Conclusiones](#10-conclusiones)
+  - [11. Respuestas](#11-respuestas)
+    - [¿Por qué las voces de los integrantes son diferentes?](#por-qué-las-voces-de-los-integrantes-son-diferentes)
+    - [¿Por qué la comparación de voces es poco exacta mediante armónicos?](#por-qué-la-comparación-de-voces-es-poco-exacta-mediante-armónicos)
+  - [12. Recomendaciones](#12-recomendaciones)
+  - [13. Repositorio](#13-repositorio)
+  - [14. Guía de Ejecución de la tarea](#14-guía-de-ejecución-de-la-tarea)
+    - [14.1 Requisitos Previos](#141-requisitos-previos)
+    - [14.2 Instalación y Compilación](#142-instalación-y-compilación)
+    - [14.3 Ejecución](#143-ejecución)
+    - [14.4 Solución de Problemas](#144-solución-de-problemas)
+    - [14.5 Tecnologías Utilizadas](#145-tecnologías-utilizadas)
 
 ##  1. Introducción
 
@@ -86,9 +90,9 @@ Permite:
 - Visualizar el dominio de la frecuencia.
 - Generar archivos `.atm` con el audio original y los datos espectrales.
 
-![alt text](image.png)
+![alt text](image-4.png)
+![alt text](image-5.png)
 
-![alt text](image-1.png)
 
 ### 3.2 Reproductor (Playback)
 
@@ -99,7 +103,8 @@ Permite:
 - Visualizar simultáneamente el dominio del tiempo y de la frecuencia.
 - Aplicar zoom a las gráficas.
 
-![alt text](image-2.png)
+![alt text](image-6.png)
+![alt text](image.png)
 
 ### 3.3 Comparador
 
@@ -113,7 +118,7 @@ Permite:
 - Determinar el nivel de coincidencia.
 - Aproximar la ubicación temporal de la coincidencia.
 
-![alt text](image-3.png)
+![alt text](image-7.png)
 
 
 ## 4. Fundamentos Teóricos
@@ -215,8 +220,15 @@ Se observó que la captura de música externa es limitada debido a:
 
 ## 10. Conclusiones
 
-El sistema Autrum permite analizar y comparar señales de audio mediante FFT, logrando representar adecuadamente las señales en el dominio del tiempo y de la frecuencia. Aunque presenta limitaciones, cumple con los objetivos propuestos y permite comprender el comportamiento de las señales de audio.
+El sistema Autrum cumple con el objetivo de analizar y comparar señales de audio mediante FFT, mostrando información útil tanto en el dominio del tiempo como en el de la frecuencia. Aunque la comparación no es exacta al nivel semántico, sí permite identificar coincidencias aproximadas y ubicar temporalmente segmentos relevantes dentro del audio original.
 
+La implementación de la Transformada Rápida de Fourier mediante el algoritmo Cooley-Tukey permitió visualizar en tiempo real los componentes frecuenciales de una señal de audio. Además, el uso de la ventana de Hann ayudó a reducir la fuga espectral, obteniendo gráficas más estables y legibles. El procesamiento por bloques resultó adecuado para equilibrar la precisión del análisis y el costo computacional.
+
+Durante el desarrollo fue importante manejar correctamente la sincronización entre los hilos de captura de audio y la interfaz gráfica. NAudio genera eventos desde hilos secundarios, por lo que fue necesario actualizar los controles visuales mediante Invoke para evitar fallos silenciosos en la interfaz.
+
+La comparación espectral mostró que dos grabaciones de una misma palabra pueden variar por diferencias de tono, volumen, pronunciación y ruido ambiente. Por esa razón, la similitud obtenida debe interpretarse como una aproximación. Aun así, el sistema logra estimar en qué parte del audio de referencia aparece la coincidencia y reproducir el audio desde ese punto.
+
+El uso de un archivo ZIP como contenedor del formato .atm fue una solución práctica, ya que permite almacenar el audio original y los datos espectrales en un solo archivo portable. Finalmente, el uso de Git requirió cuidar la exclusión de carpetas generadas automáticamente, como bin/ y obj/, para evitar conflictos innecesarios durante el trabajo colaborativo.
 
 ## 11. Respuestas
 

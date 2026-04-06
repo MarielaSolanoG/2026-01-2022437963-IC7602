@@ -18,6 +18,14 @@ namespace Autrum
         private System.Windows.Forms.Timer updateTimer;
         private System.Windows.Forms.Timer comparatorUpdateTimer;
 
+
+        private AudioRecorder comparatorRecorder;
+        private List<AtmFileManager.SpectrumFrame> referenceSpectrumFrames;
+        private AtmFileManager.SpectrumFrame testSpectrumLatest;
+        private List<float> comparatorAudioSamples;
+        private float[] referenceAudioSamples;
+        private string referenceAudioPath;
+
         // Variables para zoom - SOLO EN REPRODUCTOR
         private float zoomFactorPlayback = 1.0f;
         private int scrollPositionPlayback = 0;
@@ -165,154 +173,160 @@ namespace Autrum
 
         private void Player_PositionChanged(object sender, AudioPlayer.PositionChangedEventArgs e)
         {
-            labelPlaybackTime.Text = $"{e.Position:hh\\:mm\\:ss} / {e.Duration:hh\\:mm\\:ss}";
-            trackBarPlayback.Maximum = (int)e.Duration.TotalSeconds;
-            trackBarPlayback.Value = (int)e.Position.TotalSeconds;
+            // Actualizar UI siempre desde el hilo principal
+            if (this.InvokeRequired)
+            {
+                this.Invoke(() => Player_PositionChanged(sender, e));
+                return;
+            }
+
+            // Contador en segundos: "0:23 / 1:45"
+            int posSeconds = (int)e.Position.TotalSeconds;
+            int durSeconds = (int)e.Duration.TotalSeconds;
+            labelPlaybackTime.Text = $"{posSeconds / 60}:{posSeconds % 60:D2}  /  {durSeconds / 60}:{durSeconds % 60:D2}";
+
+            // Barra de progreso
+            trackBarPlayback.Maximum = durSeconds;
+            trackBarPlayback.Value = Math.Min(posSeconds, durSeconds);
+
+            // Cuando termina el audio, volver al estado inicial
+            if (posSeconds >= durSeconds && durSeconds > 0)
+            {
+                player.Stop();
+                btnPlay.Enabled = true;
+                btnPause.Enabled = false;
+                return;
+            }
 
             // Actualizar gráficos durante reproducción
-            if (loadedSpectrumFrames != null && loadedSpectrumFrames.Count > 0 && loadedAudioSamples != null && loadedAudioSamples.Length > 0)
+            if (loadedSpectrumFrames == null || loadedAudioSamples == null) return;
+
+            float currentSeconds = (float)e.Position.TotalSeconds;
+
+            int closestFrame = 0;
+            float minDiff = float.MaxValue;
+            for (int i = 0; i < loadedSpectrumFrames.Count; i++)
             {
-                float currentSeconds = (float)e.Position.TotalSeconds;
-                
-                // Encontrar el frame más cercano al tiempo actual
-                int closestFrame = 0;
-                float minDiff = float.MaxValue;
-                for (int i = 0; i < loadedSpectrumFrames.Count; i++)
-                {
-                    float diff = Math.Abs(loadedSpectrumFrames[i].TimeSeconds - currentSeconds);
-                    if (diff < minDiff)
-                    {
-                        minDiff = diff;
-                        closestFrame = i;
-                    }
-                }
-
-                // Calcular cuántas muestras mostrar (hasta el tiempo actual de reproducción)
-                int sampleRate = 44100;
-                int samplesUntilNow = (int)(currentSeconds * sampleRate);
-                samplesUntilNow = Math.Min(samplesUntilNow, loadedAudioSamples.Length);
-                
-                // Crear array con solo las muestras hasta ahora
-                float[] displayedSamples = new float[samplesUntilNow];
-                Array.Copy(loadedAudioSamples, 0, displayedSamples, 0, samplesUntilNow);
-
-                // Dibujar ambos gráficos - CON ZOOM solo en el Reproductor
-                Bitmap bitmap = new Bitmap(panelWaveform.Width, panelWaveform.Height);
-                Graphics g = Graphics.FromImage(bitmap);
-                
-                try
-                {
-                    int halfWidth = panelWaveform.Width / 2;
-                    
-                    // Izquierda: Onda (mostrando solo hasta el tiempo actual) - CON ZOOM
-                    Rectangle waveRect = new Rectangle(0, 0, halfWidth, panelWaveform.Height);
-                    DrawWaveformOnBitmap(g, waveRect, displayedSamples, zoomFactorPlayback, scrollPositionPlayback);
-                    
-                    // Derecha: Espectro FFT - CON ZOOM
-                    Rectangle spectrumRect = new Rectangle(halfWidth, 0, halfWidth, panelWaveform.Height);
-                    DrawSpectrumOnBitmap(g, spectrumRect, loadedSpectrumFrames[closestFrame], zoomFactorPlayback, scrollPositionPlayback);
-                }
-                finally
-                {
-                    g?.Dispose();
-                }
-                
-                panelWaveform.BackgroundImage = bitmap;
+                float diff = Math.Abs(loadedSpectrumFrames[i].TimeSeconds - currentSeconds);
+                if (diff < minDiff) { minDiff = diff; closestFrame = i; }
             }
+
+            int sampleRate = 44100;
+            int samplesUntilNow = Math.Min((int)(currentSeconds * sampleRate), loadedAudioSamples.Length);
+            float[] displayedSamples = new float[samplesUntilNow];
+            Array.Copy(loadedAudioSamples, 0, displayedSamples, 0, samplesUntilNow);
+
+            Bitmap bitmap = new Bitmap(panelWaveform.Width, panelWaveform.Height);
+            Graphics g = Graphics.FromImage(bitmap);
+            try
+            {
+                int halfWidth = panelWaveform.Width / 2;
+                DrawWaveformOnBitmap(g, new Rectangle(0, 0, halfWidth, panelWaveform.Height),
+                    displayedSamples, zoomFactorPlayback, scrollPositionPlayback);
+                DrawSpectrumOnBitmap(g, new Rectangle(halfWidth, 0, halfWidth, panelWaveform.Height),
+                    loadedSpectrumFrames[closestFrame], zoomFactorPlayback, scrollPositionPlayback);
+            }
+            finally { g?.Dispose(); }
+
+            panelWaveform.BackgroundImage = bitmap;
         }
 
         // ===== TAB 1: ANÁLISIS =====
-        private void btnStartRecording_Click(object sender, EventArgs e)
+    private void btnStartRecording_Click(object sender, EventArgs e)
+    {
+        if (recorder != null)
         {
-            if (recorder != null)
-            {
-                string path = Path.Combine(Path.GetTempPath(), "autrum_recording.wav");
-                spectrumFrames.Clear();
-                lastAudioSamples = new List<float>();
-                
-                recorder.StartRecording(path);
-                btnStartRecording.Enabled = false;
-                btnStopRecording.Enabled = true;
-                btnSaveAnalysis.Enabled = false;
-                
-                labelRecordingStatus.Text = "Grabando...";
-                labelRecordingStatus.ForeColor = Color.Red;
-                
-                // Iniciar timer para actualizar gráficos en tiempo real
-                updateTimer.Start();
-            }
+            string path = Path.Combine(Path.GetTempPath(), "autrum_recording.wav");
+            currentAudioPath = path; // ← guardar path
+            spectrumFrames.Clear();
+            lastAudioSamples = new List<float>();
+
+            recorder.StartRecording(path);
+
+            // Estado de botones al INICIAR
+            btnStartRecording.Enabled = false;
+            btnStopRecording.Enabled = true;
+            btnPauseRecording.Enabled = true;    // ← habilitar Pausar
+            btnContinueRecording.Enabled = false; // ← Continuar deshabilitado al inicio
+            btnSaveAnalysis.Enabled = false;
+
+            labelRecordingStatus.Text = "Grabando...";
+            labelRecordingStatus.ForeColor = Color.Red;
+
+            updateTimer.Start();
         }
+    }
 
-        private void btnPauseRecording_Click(object sender, EventArgs e)
+    private void btnPauseRecording_Click(object sender, EventArgs e)
+    {
+        if (recorder != null)
         {
-            if (recorder != null)
-            {
-                recorder.PauseRecording();
-                labelRecordingStatus.Text = "En pausa";
-                labelRecordingStatus.ForeColor = Color.Orange;
-            }
+            recorder.PauseRecording();
+            updateTimer.Stop();                   // ← detener gráficas
+
+            // Estado de botones al PAUSAR
+            btnPauseRecording.Enabled = false;    // ← deshabilitar Pausar
+            btnContinueRecording.Enabled = true;  // ← habilitar Continuar
+
+            labelRecordingStatus.Text = "En pausa";
+            labelRecordingStatus.ForeColor = Color.Orange;
         }
+    }
 
-        private void btnContinueRecording_Click(object sender, EventArgs e)
+    private void btnContinueRecording_Click(object sender, EventArgs e)
+    {
+        if (recorder != null)
         {
-            if (recorder != null)
-            {
-                recorder.ContinueRecording();
-                labelRecordingStatus.Text = "Grabando...";
-                labelRecordingStatus.ForeColor = Color.Red;
-            }
+            recorder.ContinueRecording();
+            updateTimer.Start();                  // ← reanudar gráficas
+
+            // Estado de botones al CONTINUAR
+            btnPauseRecording.Enabled = true;     // ← habilitar Pausar
+            btnContinueRecording.Enabled = false; // ← deshabilitar Continuar
+
+            labelRecordingStatus.Text = "Grabando...";
+            labelRecordingStatus.ForeColor = Color.Red;
         }
+    }
 
-        private void btnStopRecording_Click(object sender, EventArgs e)
+    private void btnStopRecording_Click(object sender, EventArgs e)
+    {
+        if (recorder != null)
         {
-            if (recorder != null)
-            {
-                // Detener timer
-                updateTimer.Stop();
-                
-                recorder.StopRecording();
-                btnStartRecording.Enabled = true;
-                btnStopRecording.Enabled = false;
-                btnSaveAnalysis.Enabled = true;
-                
-                labelRecordingStatus.Text = "Grabación detenida";
-                labelRecordingStatus.ForeColor = Color.Green;
+            updateTimer.Stop();
+            recorder.StopRecording();
 
-                // Obtener muestras y mostrar AMBOS gráficos (final)
-                float[] allSamples = recorder.GetAllRecordedSamples();
-                
-                // Crear bitmap para dibujar ambos gráficos
-                int panelWidth = panelSpectrumAnalysis.Width;
-                int panelHeight = panelSpectrumAnalysis.Height;
-                
-                Bitmap bitmap = new Bitmap(panelWidth, panelHeight);
-                Graphics g = Graphics.FromImage(bitmap);
-                
-                try
+            // Estado de botones al DETENER
+            btnStartRecording.Enabled = true;
+            btnStopRecording.Enabled = false;
+            btnPauseRecording.Enabled = false;    // ← deshabilitar Pausar
+            btnContinueRecording.Enabled = false; // ← deshabilitar Continuar
+            btnSaveAnalysis.Enabled = true;
+
+            labelRecordingStatus.Text = "Grabación detenida";
+            labelRecordingStatus.ForeColor = Color.Green;
+
+            // Mostrar gráficas finales (igual que antes)
+            float[] allSamples = recorder.GetAllRecordedSamples();
+            int panelWidth = panelSpectrumAnalysis.Width;
+            int panelHeight = panelSpectrumAnalysis.Height;
+            Bitmap bitmap = new Bitmap(panelWidth, panelHeight);
+            Graphics g = Graphics.FromImage(bitmap);
+            try
+            {
+                int halfWidth = panelWidth / 2;
+                Rectangle waveRect = new Rectangle(0, 0, halfWidth, panelHeight);
+                DrawWaveformOnBitmap(g, waveRect, allSamples);
+                if (spectrumFrames.Count > 0)
                 {
-                    // Dividir en dos mitades
-                    int halfWidth = panelWidth / 2;
-                    
-                    // Gráfico 1: Onda (izquierda)
-                    Rectangle waveRect = new Rectangle(0, 0, halfWidth, panelHeight);
-                    DrawWaveformOnBitmap(g, waveRect, allSamples);
-                    
-                    // Gráfico 2: Espectro FFT (derecha)
-                    if (spectrumFrames.Count > 0)
-                    {
-                        Rectangle spectrumRect = new Rectangle(halfWidth, 0, halfWidth, panelHeight);
-                        DrawSpectrumOnBitmap(g, spectrumRect, spectrumFrames[spectrumFrames.Count - 1]);
-                    }
+                    Rectangle spectrumRect = new Rectangle(halfWidth, 0, halfWidth, panelHeight);
+                    DrawSpectrumOnBitmap(g, spectrumRect, spectrumFrames[spectrumFrames.Count - 1]);
                 }
-                finally 
-                { 
-                    g?.Dispose(); 
-                }
-                
-                // Mostrar en panel
-                panelSpectrumAnalysis.BackgroundImage = bitmap;
             }
+            finally { g?.Dispose(); }
+            panelSpectrumAnalysis.BackgroundImage = bitmap;
         }
+    }
 
         private void DrawWaveformOnBitmap(Graphics g, Rectangle rect, float[] audioSamples, float zoomFactor = 1.0f, int scrollPos = 0)
         {
@@ -463,7 +477,7 @@ namespace Autrum
                 
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
-                    string tempAudio = Path.Combine(Path.GetTempPath(), "autrum_recording.wav");
+                    string tempAudio = currentAudioPath;
                     
                     var metadata = new AtmFileManager.AtmMetadata
                     {
@@ -483,6 +497,70 @@ namespace Autrum
                         MessageBox.Show("Error al guardar archivo", "Error");
                     }
                 }
+            }
+        }
+
+        private void btnLoadWav_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Filter = "WAV files (*.wav)|*.wav";
+                if (dialog.ShowDialog() != DialogResult.OK) return;
+
+                // Leer muestras del WAV
+                float[] allSamples = LoadAudioSamples(dialog.FileName);
+                if (allSamples.Length == 0)
+                {
+                    MessageBox.Show("No se pudo leer el archivo WAV.", "Error");
+                    return;
+                }
+
+                // Calcular FFT en bloques de 3 segundos (igual que en grabación)
+                spectrumFrames.Clear();
+                lastAudioSamples = new List<float>(allSamples);
+
+                int sampleRate = 44100;
+                int samplesPerBlock = sampleRate * 3;
+                float timeSeconds = 0f;
+
+                for (int offset = 0; offset + samplesPerBlock <= allSamples.Length; offset += samplesPerBlock)
+                {
+                    float[] block = new float[samplesPerBlock];
+                    Array.Copy(allSamples, offset, block, 0, samplesPerBlock);
+
+                    var spectrum = fftProcessor.ProcessAudio(block);
+                    spectrumFrames.Add(new AtmFileManager.SpectrumFrame
+                    {
+                        TimeSeconds = timeSeconds,
+                        Frequencies = spectrum.Frequencies,
+                        Magnitudes = spectrum.Magnitudes
+                    });
+                    timeSeconds += 3f;
+                }
+
+                // Mostrar gráficas
+                int panelWidth = panelSpectrumAnalysis.Width;
+                int panelHeight = panelSpectrumAnalysis.Height;
+                Bitmap bitmap = new Bitmap(panelWidth, panelHeight);
+                Graphics g = Graphics.FromImage(bitmap);
+
+                try
+                {
+                    int halfWidth = panelWidth / 2;
+                    DrawWaveformOnBitmap(g, new Rectangle(0, 0, halfWidth, panelHeight), allSamples);
+                    if (spectrumFrames.Count > 0)
+                        DrawSpectrumOnBitmap(g, new Rectangle(halfWidth, 0, halfWidth, panelHeight),
+                            spectrumFrames[spectrumFrames.Count - 1]);
+                }
+                finally { g?.Dispose(); }
+
+                panelSpectrumAnalysis.BackgroundImage = bitmap;
+
+                // Habilitar guardar
+                currentAudioPath = dialog.FileName;
+                btnSaveAnalysis.Enabled = true;
+                labelRecordingStatus.Text = $"WAV cargado: {Path.GetFileName(dialog.FileName)}";
+                labelRecordingStatus.ForeColor = Color.Cyan;
             }
         }
 
@@ -506,6 +584,7 @@ namespace Autrum
 
         // ===== TAB 2: REPRODUCCIÓN =====
         private List<AtmFileManager.SpectrumFrame> loadedSpectrumFrames;
+        private string currentAudioPath; 
         private float[] loadedAudioSamples; // Almacenar muestras para dibujar onda
         
         private void btnLoadAudio_Click(object sender, EventArgs e)
@@ -566,11 +645,9 @@ namespace Autrum
             player.Play();
             btnPlay.Enabled = false;
             btnPause.Enabled = true;
-            
-            // Enfocar el panel para poder usar el scroll
+            btnStop.Enabled = true;
             panelWaveform.Focus();
         }
-
         private void btnPause_Click(object sender, EventArgs e)
         {
             player.Pause();
@@ -578,11 +655,19 @@ namespace Autrum
             btnPause.Enabled = false;
         }
 
+        // Renombrado de Stop a Restart: vuelve al segundo 0
         private void btnStop_Click(object sender, EventArgs e)
         {
             player.Stop();
             btnPlay.Enabled = true;
             btnPause.Enabled = false;
+
+            // Resetear contador y barra
+            labelPlaybackTime.Text = "0:00  /  0:00";
+            trackBarPlayback.Value = 0;
+
+            // Limpiar gráficas
+            panelWaveform.BackgroundImage = null;
         }
 
         private void trackBarPlayback_Scroll(object sender, EventArgs e)
@@ -591,10 +676,10 @@ namespace Autrum
         }
 
         // ===== TAB 3: COMPARACIÓN =====
-        private AudioRecorder comparatorRecorder;
-        private List<AtmFileManager.SpectrumFrame> referenceSpectrumFrames;
-        private AtmFileManager.SpectrumFrame testSpectrumLatest;
-        private List<float> comparatorAudioSamples;
+        // private AudioRecorder comparatorRecorder;
+        // private List<AtmFileManager.SpectrumFrame> referenceSpectrumFrames;
+        // private AtmFileManager.SpectrumFrame testSpectrumLatest;
+        // private List<float> comparatorAudioSamples;
 
         private void btnLoadReference_Click(object sender, EventArgs e)
         {
@@ -603,8 +688,10 @@ namespace Autrum
                 dialog.Filter = "Autrum Files (*.atm)|*.atm";
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
-                    if (fileManager.LoadFromAtm(dialog.FileName, out _, out _, out referenceSpectrumFrames))
+                    if (fileManager.LoadFromAtm(dialog.FileName, out string audioPath, out _, out referenceSpectrumFrames))
                     {
+                        referenceAudioPath = audioPath;
+                        referenceAudioSamples = LoadAudioSamples(audioPath);
                         labelReferenceFile.Text = Path.GetFileName(dialog.FileName);
                         btnLoadTest.Enabled = true;
                     }
@@ -653,7 +740,7 @@ namespace Autrum
             // Detener grabación inmediatamente
             comparatorRecorder.StopRecording();
             
-            labelTestFile.Text = "Audio de prueba grabado. Presiona 'Compare' para analizar.";
+            labelTestFile.Text = "Audio de prueba grabado. Haz clic en 'Compare' para analizar.";
             
             // Ocultar botones Stop/Retry
             btnStopComparator.Visible = false;
@@ -710,37 +797,28 @@ namespace Autrum
         private void btnCompare_Click(object sender, EventArgs e)
         {
             // Validar que se haya cargado una referencia
-            if (referenceSpectrumFrames == null || referenceSpectrumFrames.Count == 0)
+
+            if (referenceSpectrumFrames == null || referenceSpectrumFrames.Count == 0 ||
+                referenceAudioSamples == null || referenceAudioSamples.Length == 0)
             {
                 MessageBox.Show("Carga un archivo .atm referencia primero", "Error");
                 return;
             }
 
             // Validar que se haya grabado audio de prueba
-            if (comparatorRecorder == null || testSpectrumLatest == null)
+
+            if (comparatorRecorder == null || comparatorAudioSamples == null || comparatorAudioSamples.Count == 0)
             {
                 MessageBox.Show("Graba audio de prueba primero", "Error");
                 return;
             }
 
-            // Preparar datos para comparación
-            // referenceSpectrum = espectro de grabación 1 (archivo .atm cargado)
-            // testSpectrum = espectro de grabación 2 (audio grabado en comparador)
-            var referenceData = new SpectrumData
-            {
-                Frequencies = referenceSpectrumFrames[0].Frequencies,
-                Magnitudes = CombineSpectrumMagnitudes(referenceSpectrumFrames)
-            };
-            
-            var testData = new SpectrumData
-            {
-                Frequencies = testSpectrumLatest.Frequencies,
-                Magnitudes = testSpectrumLatest.Magnitudes
-            };
-
             // BÚSQUEDA TEMPORAL: Compara el espectro de prueba contra TODOS los puntos temporales
             // del audio de referencia para encontrar la mejor coincidencia
-            ComparisonResult result = comparator.CompareWithTimeSearch(referenceData, testData);
+            
+            float[] testSamples = comparatorAudioSamples.ToArray();
+
+            ComparisonResult result = comparator.CompareWithTimeSearch(referenceAudioSamples, testSamples);
 
             // Mostrar resultados detallados
             string resultText = $"SIMILITUD GENERAL: {result.SimilarityScore:F2}%\n" +
@@ -749,9 +827,20 @@ namespace Autrum
 
             if (result.TimeFoundSeconds >= 0)
             {
-                resultText += $"\n\n✓ ENCONTRADO en t={result.TimeFoundSeconds:F2}s del audio referencia";
+                int foundSecond = (int)result.TimeFoundSeconds;
+                resultText += $"\n\n✓ ENCONTRADO en t={foundSecond}s del audio referencia";
                 labelComparisonResult.Text = resultText;
                 MessageBox.Show("¡Coincidencia encontrada!" + Environment.NewLine + resultText, "Resultado");
+
+                if (!string.IsNullOrWhiteSpace(referenceAudioPath) && player.LoadAudio(referenceAudioPath))
+                {
+                    player.Seek(TimeSpan.FromSeconds(foundSecond));
+                    player.Play();
+                }
+                else
+                {
+                    MessageBox.Show("No se pudo reproducir el audio de referencia desde el punto encontrado.", "Aviso");
+                }
             }
             else
             {

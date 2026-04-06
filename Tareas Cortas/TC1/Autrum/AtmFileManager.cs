@@ -8,9 +8,13 @@ namespace Autrum
 {
     public class AtmFileManager
     {
+        private const string AudioEntryName = "audio.wav";
+        private const string MetadataEntryName = "metadata.json";
+        private const string SpectrumEntryName = "spectrum.json";
+
         public class AtmMetadata
         {
-            public string AudioFormat { get; set; }
+            public string AudioFormat { get; set; } = "WAV";
             public int SampleRate { get; set; }
             public int Channels { get; set; }
             public float Duration { get; set; }
@@ -20,94 +24,46 @@ namespace Autrum
         public class SpectrumFrame
         {
             public float TimeSeconds { get; set; }
-            public float[] Frequencies { get; set; }
-            public float[] Magnitudes { get; set; }
+            public float[] Frequencies { get; set; } = Array.Empty<float>();
+            public float[] Magnitudes { get; set; } = Array.Empty<float>();
         }
 
-        public bool SaveAsAtm(string audioPath, string outputPath, AtmMetadata metadata, 
-                              List<SpectrumFrame> spectrumFrames)
+        public bool SaveAsAtm(
+            string audioPath,
+            string outputAtmPath,
+            AtmMetadata metadata,
+            List<SpectrumFrame> spectrumFrames)
         {
             try
             {
-                using (var zipArchive = ZipFile.Open(outputPath, ZipArchiveMode.Create))
+                if (string.IsNullOrWhiteSpace(audioPath) || !File.Exists(audioPath))
+                    return false;
+
+                string? outputDir = Path.GetDirectoryName(outputAtmPath);
+                if (!string.IsNullOrWhiteSpace(outputDir))
                 {
-                    // Agregar archivo de audio
-                    if (File.Exists(audioPath))
-                    {
-                        zipArchive.CreateEntryFromFile(audioPath, "audio.wav");
-                    }
-
-                    // Agregar metadatos como JSON
-                    var metadataEntry = zipArchive.CreateEntry("metadata.json");
-                    using (var writer = new StreamWriter(metadataEntry.Open()))
-                    {
-                        string json = JsonSerializer.Serialize(metadata, 
-                            new JsonSerializerOptions { WriteIndented = true });
-                        writer.Write(json);
-                    }
-
-                    // Agregar espectros como JSON
-                    if (spectrumFrames != null && spectrumFrames.Count > 0)
-                    {
-                        var spectrumEntry = zipArchive.CreateEntry("spectrum.json");
-                        using (var writer = new StreamWriter(spectrumEntry.Open()))
-                        {
-                            string json = JsonSerializer.Serialize(spectrumFrames, 
-                                new JsonSerializerOptions { WriteIndented = true });
-                            writer.Write(json);
-                        }
-                    }
+                    Directory.CreateDirectory(outputDir);
                 }
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
 
-        public bool LoadFromAtm(string atmPath, out string audioPath, out AtmMetadata metadata, 
-                                out List<SpectrumFrame> spectrumFrames)
-        {
-            audioPath = null;
-            metadata = null;
-            spectrumFrames = null;
-            string tempDir = Path.Combine(Path.GetTempPath(), "autrum_temp_" + Guid.NewGuid().ToString());
-
-            try
-            {
-                Directory.CreateDirectory(tempDir);
-
-                using (var zipArchive = ZipFile.OpenRead(atmPath))
+                if (File.Exists(outputAtmPath))
                 {
-                    // Extraer audio
-                    var audioEntry = zipArchive.GetEntry("audio.wav");
-                    if (audioEntry == null) return false;
+                    File.Delete(outputAtmPath);
+                }
 
-                    audioPath = Path.Combine(tempDir, "audio.wav");
-                    audioEntry.ExtractToFile(audioPath, true);
+                using ZipArchive archive = ZipFile.Open(outputAtmPath, ZipArchiveMode.Create);
 
-                    // Extraer y parsear metadatos
-                    var metadataEntry = zipArchive.GetEntry("metadata.json");
-                    if (metadataEntry != null)
-                    {
-                        using (var reader = new StreamReader(metadataEntry.Open()))
-                        {
-                            string json = reader.ReadToEnd();
-                            metadata = JsonSerializer.Deserialize<AtmMetadata>(json);
-                        }
-                    }
+                archive.CreateEntryFromFile(audioPath, AudioEntryName);
 
-                    // Extraer espectros
-                    var spectrumEntry = zipArchive.GetEntry("spectrum.json");
-                    if (spectrumEntry != null)
-                    {
-                        using (var reader = new StreamReader(spectrumEntry.Open()))
-                        {
-                            string json = reader.ReadToEnd();
-                            spectrumFrames = JsonSerializer.Deserialize<List<SpectrumFrame>>(json);
-                        }
-                    }
+                ZipArchiveEntry metadataEntry = archive.CreateEntry(MetadataEntryName);
+                using (Stream metadataStream = metadataEntry.Open())
+                {
+                    JsonSerializer.Serialize(metadataStream, metadata);
+                }
+
+                ZipArchiveEntry spectrumEntry = archive.CreateEntry(SpectrumEntryName);
+                using (Stream spectrumStream = spectrumEntry.Open())
+                {
+                    JsonSerializer.Serialize(spectrumStream, spectrumFrames);
                 }
 
                 return true;
@@ -118,17 +74,61 @@ namespace Autrum
             }
         }
 
-        // Método para compatibilidad con código antiguo
-        public bool SaveAsAtm(string audioPath, string outputPath, AtmMetadata metadata)
+        public bool LoadFromAtm(
+            string atmPath,
+            out string extractedAudioPath,
+            out AtmMetadata metadata,
+            out List<SpectrumFrame> spectrumFrames)
         {
-            return SaveAsAtm(audioPath, outputPath, metadata, null);
-        }
+            extractedAudioPath = string.Empty;
+            metadata = new AtmMetadata();
+            spectrumFrames = new List<SpectrumFrame>();
 
-        // Método para compatibilidad con código antiguo
-        public bool LoadFromAtm(string atmPath, out string audioPath, out AtmMetadata metadata)
-        {
-            List<SpectrumFrame> dummy;
-            return LoadFromAtm(atmPath, out audioPath, out metadata, out dummy);
+            try
+            {
+                if (string.IsNullOrWhiteSpace(atmPath) || !File.Exists(atmPath))
+                    return false;
+
+                string extractRoot = Path.Combine(
+                    Path.GetTempPath(),
+                    "Autrum",
+                    Path.GetFileNameWithoutExtension(atmPath) + "_" + Guid.NewGuid().ToString("N"));
+
+                Directory.CreateDirectory(extractRoot);
+
+                using ZipArchive archive = ZipFile.OpenRead(atmPath);
+
+                ZipArchiveEntry? audioEntry = archive.GetEntry(AudioEntryName);
+                ZipArchiveEntry? metadataEntry = archive.GetEntry(MetadataEntryName);
+                ZipArchiveEntry? spectrumEntry = archive.GetEntry(SpectrumEntryName);
+
+                if (audioEntry == null || metadataEntry == null || spectrumEntry == null)
+                    return false;
+
+                extractedAudioPath = Path.Combine(extractRoot, AudioEntryName);
+                audioEntry.ExtractToFile(extractedAudioPath, true);
+
+                using (Stream metadataStream = metadataEntry.Open())
+                {
+                    AtmMetadata? loadedMetadata = JsonSerializer.Deserialize<AtmMetadata>(metadataStream);
+                    metadata = loadedMetadata ?? new AtmMetadata();
+                }
+
+                using (Stream spectrumStream = spectrumEntry.Open())
+                {
+                    List<SpectrumFrame>? loadedFrames = JsonSerializer.Deserialize<List<SpectrumFrame>>(spectrumStream);
+                    spectrumFrames = loadedFrames ?? new List<SpectrumFrame>();
+                }
+
+                return true;
+            }
+            catch
+            {
+                extractedAudioPath = string.Empty;
+                metadata = new AtmMetadata();
+                spectrumFrames = new List<SpectrumFrame>();
+                return false;
+            }
         }
     }
 }

@@ -27,7 +27,10 @@ namespace Autrum
             // TAB 1: ANALYSIS
             btnStartRecording = new Button();
             btnStopRecording = new Button();
+            btnPauseRecording = new Button();
+            btnContinueRecording = new Button();
             btnSaveAnalysis = new Button();
+            btnLoadWav = new Button();
             labelRecordingStatus = new Label();
             panelSpectrumAnalysis = new Panel();
 
@@ -64,7 +67,10 @@ namespace Autrum
             tabControl1.TabPages.AddRange(new[] { tabPageAnalysis, tabPagePlayback, tabPageComparison });
 
             // ===== TAB 1: ANALYSIS =====
+            // Fila de botones: [Start] [Stop] [Pausar] [Continuar] [Save as .atm]
+            // Posiciones: 10, 170, 330, 440, 560
             tabPageAnalysis.Text = "Analysis";
+
             btnStartRecording.Text = "Start Recording";
             btnStartRecording.Location = new Point(10, 10);
             btnStartRecording.Size = new Size(150, 30);
@@ -76,10 +82,28 @@ namespace Autrum
             btnStopRecording.Enabled = false;
             btnStopRecording.Click += btnStopRecording_Click;
 
+            btnPauseRecording.Text = "⏸ Pause";
+            btnPauseRecording.Location = new Point(330, 10);
+            btnPauseRecording.Size = new Size(100, 30);
+            btnPauseRecording.Enabled = false;
+            btnPauseRecording.Click += btnPauseRecording_Click;
+
+            btnContinueRecording.Text = "▶ Continue";
+            btnContinueRecording.Location = new Point(440, 10);
+            btnContinueRecording.Size = new Size(110, 30);
+            btnContinueRecording.Enabled = false;
+            btnContinueRecording.Click += btnContinueRecording_Click;
+
             btnSaveAnalysis.Text = "Save as .atm";
-            btnSaveAnalysis.Location = new Point(330, 10);
+            btnSaveAnalysis.Location = new Point(560, 10);
             btnSaveAnalysis.Size = new Size(150, 30);
+            btnSaveAnalysis.Enabled = false;
             btnSaveAnalysis.Click += btnSaveAnalysis_Click;
+
+            btnLoadWav.Text = "Load WAV";
+            btnLoadWav.Location = new Point(720, 10);
+            btnLoadWav.Size = new Size(100, 30);
+            btnLoadWav.Click += btnLoadWav_Click;
 
             labelRecordingStatus.Text = "Ready";
             labelRecordingStatus.Location = new Point(10, 50);
@@ -90,10 +114,20 @@ namespace Autrum
             panelSpectrumAnalysis.BackColor = Color.Black;
             panelSpectrumAnalysis.BorderStyle = BorderStyle.Fixed3D;
 
-            tabPageAnalysis.Controls.AddRange(new Control[] { btnStartRecording, btnStopRecording, btnSaveAnalysis, labelRecordingStatus, panelSpectrumAnalysis });
+            tabPageAnalysis.Controls.AddRange(new Control[] {
+                btnStartRecording,
+                btnStopRecording,
+                btnPauseRecording,
+                btnContinueRecording,
+                btnSaveAnalysis,
+                btnLoadWav,
+                labelRecordingStatus,
+                panelSpectrumAnalysis
+            });
 
             // ===== TAB 2: PLAYBACK =====
             tabPagePlayback.Text = "Playback";
+
             btnLoadAudio.Text = "Load Audio";
             btnLoadAudio.Location = new Point(10, 10);
             btnLoadAudio.Size = new Size(100, 30);
@@ -111,7 +145,7 @@ namespace Autrum
             btnPause.Enabled = false;
             btnPause.Click += btnPause_Click;
 
-            btnStop.Text = "Stop";
+            btnStop.Text = "Restart";
             btnStop.Location = new Point(300, 10);
             btnStop.Size = new Size(80, 30);
             btnStop.Click += btnStop_Click;
@@ -124,19 +158,26 @@ namespace Autrum
             trackBarPlayback.Size = new Size(930, 30);
             trackBarPlayback.Scroll += trackBarPlayback_Scroll;
 
-            labelPlaybackTime.Text = "00:00:00 / 00:00:00";
-            labelPlaybackTime.Location = new Point(10, 120);
-            labelPlaybackTime.Size = new Size(500, 20);
+            labelPlaybackTime.Text = "0:00  /  0:00";
+            labelPlaybackTime.Location = new Point(10, 140);
+            labelPlaybackTime.Size = new Size(300, 30);
+            labelPlaybackTime.Font = new Font("Arial", 14, FontStyle.Bold);
+            labelPlaybackTime.ForeColor = Color.White;
+            labelPlaybackTime.BackColor = Color.Black;
 
-            panelWaveform.Location = new Point(10, 150);
+            panelWaveform.Location = new Point(10, 180);
             panelWaveform.Size = new Size(930, 250);
             panelWaveform.BackColor = Color.Black;
             panelWaveform.BorderStyle = BorderStyle.Fixed3D;
 
-            tabPagePlayback.Controls.AddRange(new Control[] { btnLoadAudio, btnPlay, btnPause, btnStop, labelAudioPath, trackBarPlayback, labelPlaybackTime, panelWaveform });
+            tabPagePlayback.Controls.AddRange(new Control[] {
+                btnLoadAudio, btnPlay, btnPause, btnStop,
+                labelAudioPath, trackBarPlayback, labelPlaybackTime, panelWaveform
+            });
 
             // ===== TAB 3: COMPARISON =====
             tabPageComparison.Text = "Comparison";
+
             btnLoadReference.Text = "Load Reference";
             btnLoadReference.Location = new Point(10, 10);
             btnLoadReference.Size = new Size(150, 30);
@@ -171,7 +212,7 @@ namespace Autrum
 
             labelTestFile.Text = "No test file loaded";
             labelTestFile.Location = new Point(170, 55);
-            labelTestFile.Size = new Size(300, 20);
+            labelTestFile.Size = new Size(760, 20);
 
             btnCompare.Text = "Compare";
             btnCompare.Location = new Point(10, 90);
@@ -183,7 +224,11 @@ namespace Autrum
             labelComparisonResult.Size = new Size(500, 80);
             labelComparisonResult.BorderStyle = BorderStyle.Fixed3D;
 
-            tabPageComparison.Controls.AddRange(new Control[] { btnLoadReference, labelReferenceFile, btnLoadTest, btnStopComparator, btnRetryComparator, labelTestFile, btnCompare, labelComparisonResult });
+            tabPageComparison.Controls.AddRange(new Control[] {
+                btnLoadReference, labelReferenceFile,
+                btnLoadTest, btnStopComparator, btnRetryComparator,
+                labelTestFile, btnCompare, labelComparisonResult
+            });
 
             // Agregar a form
             this.Controls.Add(tabControl1);
@@ -199,7 +244,10 @@ namespace Autrum
         // Tab 1
         private Button btnStartRecording;
         private Button btnStopRecording;
+        private Button btnPauseRecording;
+        private Button btnContinueRecording;
         private Button btnSaveAnalysis;
+        private Button btnLoadWav;
         private Label labelRecordingStatus;
         private Panel panelSpectrumAnalysis;
 

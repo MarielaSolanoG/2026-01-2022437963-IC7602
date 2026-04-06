@@ -28,7 +28,18 @@ namespace Autrum
         {
             try
             {
+                positionTimer.Stop();
+
+                if (waveOutDevice != null)
+                {
+                    waveOutDevice.Stop();
+                    waveOutDevice.Dispose();
+                }
+
+                audioFileReader?.Dispose();
+
                 audioFileReader = new AudioFileReader(filePath);
+                waveOutDevice = new WaveOutEvent();
                 waveOutDevice.Init(audioFileReader);
                 return true;
             }
@@ -61,7 +72,15 @@ namespace Autrum
         public void Seek(TimeSpan position)
         {
             if (audioFileReader != null)
+            {
+                if (position < TimeSpan.Zero)
+                    position = TimeSpan.Zero;
+
+                if (position > audioFileReader.TotalTime)
+                    position = audioFileReader.TotalTime;
+
                 audioFileReader.CurrentTime = position;
+            }
         }
 
         public TimeSpan GetCurrentPosition()

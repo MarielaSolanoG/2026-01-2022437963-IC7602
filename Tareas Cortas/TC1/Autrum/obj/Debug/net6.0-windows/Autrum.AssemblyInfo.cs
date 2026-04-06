@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Autrum")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d9eeb809afe7e5b9deb2006e59b43eb5b3f03b59")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+62a91a88aaba30477e587eff2a4c1ee237b82b2f")]
 [assembly: System.Reflection.AssemblyProductAttribute("Autrum")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Autrum")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

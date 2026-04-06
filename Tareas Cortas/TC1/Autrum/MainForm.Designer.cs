@@ -212,7 +212,7 @@ namespace Autrum
 
             labelTestFile.Text = "No test file loaded";
             labelTestFile.Location = new Point(170, 55);
-            labelTestFile.Size = new Size(300, 20);
+            labelTestFile.Size = new Size(760, 20);
 
             btnCompare.Text = "Compare";
             btnCompare.Location = new Point(10, 90);

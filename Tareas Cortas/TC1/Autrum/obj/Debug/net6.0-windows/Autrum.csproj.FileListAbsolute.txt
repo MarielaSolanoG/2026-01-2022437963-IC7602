@@ -32,11 +32,9 @@ C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Asio.dll
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Core.dll
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Midi.dll
-C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Vorbis.dll
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Wasapi.dll
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.WinForms.dll
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.WinMM.dll
-C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NVorbis.dll
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.csproj.AssemblyReference.cache
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.AssemblyInfoInputs.cache

@@ -740,7 +740,7 @@ namespace Autrum
             // Detener grabación inmediatamente
             comparatorRecorder.StopRecording();
             
-            labelTestFile.Text = "Audio de prueba grabado. Presiona 'Compare' para analizar.";
+            labelTestFile.Text = "Audio de prueba grabado. Haz clic en 'Compare' para analizar.";
             
             // Ocultar botones Stop/Retry
             btnStopComparator.Visible = false;

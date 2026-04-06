@@ -1,0 +1,51 @@
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.csproj.AssemblyReference.cache
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.AssemblyInfoInputs.cache
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.AssemblyInfo.cs
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.csproj.CoreCompileInputs.cache
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.exe
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.deps.json
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.runtimeconfig.json
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.pdb
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Asio.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Core.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Midi.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Vorbis.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Wasapi.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.WinForms.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.WinMM.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NVorbis.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.csproj.CopyComplete
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\refint\Autrum.dll
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.pdb
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.genruntimeconfig.cache
+C:\Users\roina\Documents\2026-01-2023213657-IC7602\Tareas_Cortas\TC1\Autrum\obj\Debug\net6.0-windows\ref\Autrum.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.exe
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.deps.json
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.runtimeconfig.json
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\Autrum.pdb
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Asio.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Core.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Midi.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Vorbis.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.Wasapi.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.WinForms.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NAudio.WinMM.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\bin\Debug\net6.0-windows\NVorbis.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.csproj.AssemblyReference.cache
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.AssemblyInfoInputs.cache
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.AssemblyInfo.cs
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.csproj.CoreCompileInputs.cache
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.sourcelink.json
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.csproj.Up2Date
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\refint\Autrum.dll
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.pdb
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\Autrum.genruntimeconfig.cache
+C:\Users\marie\Desktop\I-S-2026\Redes\2026-01-2022437963-IC7602\Tareas Cortas\TC1\Autrum\obj\Debug\net6.0-windows\ref\Autrum.dll

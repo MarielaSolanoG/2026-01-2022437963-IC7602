@@ -1,0 +1,32 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tareas Cortas", "Tareas Cortas", "{421DB7E3-828A-697B-CAAC-363F71C43E78}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TC1", "TC1", "{88E3D002-B48D-93B3-3AFE-DC8BA4A35593}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Autrum", "Tareas Cortas\TC1\Autrum\Autrum.csproj", "{D1FE7C09-10A7-3AB2-DF64-7CF8EBECD751}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D1FE7C09-10A7-3AB2-DF64-7CF8EBECD751}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1FE7C09-10A7-3AB2-DF64-7CF8EBECD751}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1FE7C09-10A7-3AB2-DF64-7CF8EBECD751}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1FE7C09-10A7-3AB2-DF64-7CF8EBECD751}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{88E3D002-B48D-93B3-3AFE-DC8BA4A35593} = {421DB7E3-828A-697B-CAAC-363F71C43E78}
+		{D1FE7C09-10A7-3AB2-DF64-7CF8EBECD751} = {88E3D002-B48D-93B3-3AFE-DC8BA4A35593}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0DFE3105-080F-48A6-939C-F152C3653828}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,28 @@
+global:
+  namespacePublico: publico
+  namespacePrivado: privado
+
+apache1:
+  enabled: true
+
+apache2:
+  enabled: true
+
+ingress:
+  enabled: true
+
+router:
+  enabled: true
+
+asterisk:
+  enabled: true
+
+ingressController:
+  enabled: true
+
+ingress-nginx:
+  enabled: true
+  namespaceOverride: publico
+  controller:
+    admissionWebhooks:
+      enabled: false

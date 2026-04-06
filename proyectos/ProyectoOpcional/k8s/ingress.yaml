@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: apache-ingress
+  namespace: privado
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /Apache1(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: apache1
+            port:
+              number: 80
+      - path: /Apache2(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: apache2
+            port:
+              number: 80

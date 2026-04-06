@@ -1,0 +1,18 @@
+dependencies:
+- name: apache1
+  repository: file://../apache1
+  version: 0.1.0
+- name: apache2
+  repository: file://../apache2
+  version: 0.1.0
+- name: router
+  repository: file://../router
+  version: 0.1.0
+- name: asterisk
+  repository: file://../asterisk
+  version: 0.1.0
+- name: ingress-nginx
+  repository: https://kubernetes.github.io/ingress-nginx
+  version: 4.12.1
+digest: sha256:0029fae7d917a095365968580a260e3b4e4893bf0ac67af690858562498f52f0
+generated: "2026-03-19T16:01:53.8118504-06:00"

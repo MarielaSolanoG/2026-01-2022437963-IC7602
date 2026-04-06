@@ -147,13 +147,8 @@ namespace Autrum
             }
 
             return samples;
-        }
 
         /// <summary>
-        /// Devuelve todas las muestras grabadas hasta el momento.
-        /// Lee directamente del archivo WAV para incluir lo grabado antes de pausas.
-        /// </summary>
-        public float[] GetAllRecordedSamples()
         {
             // Asegurarse de que el writer esté flushado antes de leer
             writer?.Flush();

@@ -90,9 +90,9 @@ Permite:
 - Visualizar el dominio de la frecuencia.
 - Generar archivos `.atm` con el audio original y los datos espectrales.
 
-![alt text](image.png)
+![alt text](image-4.png)
+![alt text](image-5.png)
 
-![alt text](image-1.png)
 
 ### 3.2 Reproductor (Playback)
 
@@ -103,7 +103,8 @@ Permite:
 - Visualizar simultáneamente el dominio del tiempo y de la frecuencia.
 - Aplicar zoom a las gráficas.
 
-![alt text](image-2.png)
+![alt text](image-6.png)
+![alt text](image.png)
 
 ### 3.3 Comparador
 
@@ -117,7 +118,7 @@ Permite:
 - Determinar el nivel de coincidencia.
 - Aproximar la ubicación temporal de la coincidencia.
 
-![alt text](image-3.png)
+![alt text](image-7.png)
 
 
 ## 4. Fundamentos Teóricos

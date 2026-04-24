@@ -145,6 +145,7 @@ El sistema fue validado mediante:
 ![alt text](image-2.png)
 
 - Acceso a servicios vía navegador
+  
 ![alt text](image-7.png)
 ![alt text](image-8.png)
 

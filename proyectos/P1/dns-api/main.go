@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -18,6 +19,18 @@ func main() {
 	log.Println("DNS Server:", os.Getenv("DNS_REMOTE_SERVER"))
 
 	r := gin.Default()
+
+	// CORS — permite que la UI en :5173 llame al API en :8080
+	r.Use(func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
 
 	// Verifica si un dominio existe en Supabase
 	r.GET("/api/exists", func(c *gin.Context) {
@@ -69,6 +82,127 @@ func main() {
 			"data": base64.StdEncoding.EncodeToString(response),
 		})
 	})
+
+
+	// GET /api/records — lista todos los registros
+	r.GET("/api/records", func(c *gin.Context) {
+		records, err := supabase.GetAllRecords()
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, records)
+	})
+
+	// POST /api/records — crea un registro
+	r.POST("/api/records", func(c *gin.Context) {
+		var record supabase.DnsRecord
+		if err := c.ShouldBindJSON(&record); err != nil {
+			c.JSON(400, gin.H{"error": "body inválido: " + err.Error()})
+			return
+		}
+		created, err := supabase.CreateRecord(record)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(201, created)
+	})
+
+	// PUT /api/records/:id — actualiza un registro
+	r.PUT("/api/records/:id", func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": "ID inválido"})
+			return
+		}
+		var record supabase.DnsRecord
+		if err := c.ShouldBindJSON(&record); err != nil {
+			c.JSON(400, gin.H{"error": "body inválido: " + err.Error()})
+			return
+		}
+		updated, err := supabase.UpdateRecord(id, record)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, updated)
+	})
+
+	// DELETE /api/records/:id — elimina un registro
+	r.DELETE("/api/records/:id", func(c *gin.Context) {
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": "ID inválido"})
+			return
+		}
+		if err := supabase.DeleteRecord(id); err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(200, gin.H{"message": "registro eliminado"})
+	})
+
+
+// GET /api/ip-country — lista todos
+r.GET("/api/ip-country", func(c *gin.Context) {
+    records, err := supabase.GetAllIpCountry()
+    if err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(200, records)
+})
+
+// POST /api/ip-country — crea uno
+r.POST("/api/ip-country", func(c *gin.Context) {
+    var record supabase.IpCountry
+    if err := c.ShouldBindJSON(&record); err != nil {
+        c.JSON(400, gin.H{"error": err.Error()})
+        return
+    }
+    created, err := supabase.CreateIpCountry(record)
+    if err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(201, created)
+})
+
+// PUT /api/ip-country/:id — actualiza uno
+r.PUT("/api/ip-country/:id", func(c *gin.Context) {
+    id, err := strconv.Atoi(c.Param("id"))
+    if err != nil {
+        c.JSON(400, gin.H{"error": "ID inválido"})
+        return
+    }
+    var record supabase.IpCountry
+    if err := c.ShouldBindJSON(&record); err != nil {
+        c.JSON(400, gin.H{"error": err.Error()})
+        return
+    }
+    updated, err := supabase.UpdateIpCountry(id, record)
+    if err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(200, updated)
+})
+
+// DELETE /api/ip-country/:id — elimina uno
+r.DELETE("/api/ip-country/:id", func(c *gin.Context) {
+    id, err := strconv.Atoi(c.Param("id"))
+    if err != nil {
+        c.JSON(400, gin.H{"error": "ID inválido"})
+        return
+    }
+    if err := supabase.DeleteIpCountry(id); err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(200, gin.H{"message": "eliminado"})
+})
+
 
 	r.Run(":8080")
 }

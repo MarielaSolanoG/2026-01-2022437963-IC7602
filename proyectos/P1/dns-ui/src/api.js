@@ -61,3 +61,13 @@ export async function deleteIpCountry(id) {
   const r = await fetch(`${BASE}/api/ip-country/${id}`, { method: 'DELETE' })
   if (!r.ok) throw new Error('Error al eliminar')
 }
+
+export async function updateHealthCheck(dnsRecordId, body) {
+    const r = await fetch(`${BASE}/api/health-checks/${dnsRecordId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+    if (!r.ok) throw new Error('Error al actualizar health check')
+    return r.json()
+}

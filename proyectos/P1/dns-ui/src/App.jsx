@@ -8,7 +8,8 @@ import {
   getIpCountry,
   createIpCountry,
   updateIpCountry,
-  deleteIpCountry
+  deleteIpCountry,
+  updateHealthCheck    
 } from './api'
 
 
@@ -282,23 +283,30 @@ function DnsModal({ initial, onSave, onClose, saving, saveError }) {
   }
 
   function handleSubmit() {
-    if (!domain.trim())               return alert('El dominio es requerido.')
-    if (ips.some(e => !e.ip.trim())) return alert('Todas las IPs son requeridas.')
-    onSave({
-      record: { domain: domain.trim(), type, ips, healthy: true },
-      hc: {
-        check_type:     checkType,
-        timeout:        parseInt(timeout),
-        retries:        parseInt(retries),
-        interval:       parseInt(interval),
-        path:           checkType === 'http' ? path : '/',
-        expected_codes: checkType === 'http'
-          ? codes.split(',').map(c => parseInt(c.trim())).filter(Boolean)
-          : [200],
-      }
-    })
-  }
+      if (!domain.trim()) return alert('El dominio es requerido.')
+      if (ips.some(e => !e.ip.trim())) return alert('Todas las IPs son requeridas.')
 
+      // Limpiar IPs según el tipo — solo guardar los campos necesarios
+      const cleanIps = ips.map(e => {
+          if (type === 'weight')     return { ip: e.ip.trim(), weight: e.weight ?? 1 }
+          if (type === 'geo')        return { ip: e.ip.trim(), country: e.country ?? '' }
+          return { ip: e.ip.trim() } // single, multi, round-trip — solo IP
+      })
+
+      onSave({
+          record: { domain: domain.trim(), type, ips: cleanIps, healthy: true },
+          hc: {
+              check_type:     checkType,
+              timeout:        parseInt(timeout),
+              retries:        parseInt(retries),
+              interval:       parseInt(interval),
+              path:           checkType === 'http' ? path : '/',
+              expected_codes: checkType === 'http'
+                  ? codes.split(',').map(c => parseInt(c.trim())).filter(Boolean)
+                  : [200],
+          }
+      })
+  }
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
@@ -410,16 +418,21 @@ function DnsRecordsView({ onNavigate }) {
   function openEdit(r)  { setEditing(r);    setSaveError(null); setShowModal(true) }
   function closeModal() { setShowModal(false); setEditing(null) }
 
-  async function handleSave({ record }) {
-    setSaving(true); setSaveError(null)
-    try {
-      editing ? await updateDnsRecord(editing.id, record) : await createDnsRecord(record)
-      closeModal(); load()
-    } catch (err) {
-      setSaveError(err.message)
-    } finally {
-      setSaving(false)
-    }
+  async function handleSave({ record, hc }) {
+      setSaving(true); setSaveError(null)
+      try {
+          if (editing) {
+              await updateDnsRecord(editing.id, record)
+              await updateHealthCheck(editing.id, hc)
+          } else {
+              await createDnsRecord(record)
+          }
+          closeModal(); load()
+      } catch (err) {
+          setSaveError(err.message)
+      } finally {
+          setSaving(false)
+      }
   }
 
   async function handleDelete(r) {

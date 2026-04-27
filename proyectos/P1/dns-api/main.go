@@ -203,6 +203,23 @@ r.DELETE("/api/ip-country/:id", func(c *gin.Context) {
     c.JSON(200, gin.H{"message": "eliminado"})
 })
 
+r.PUT("/api/health-checks/:dns_record_id", func(c *gin.Context) {
+    id, err := strconv.Atoi(c.Param("dns_record_id"))
+    if err != nil {
+        c.JSON(400, gin.H{"error": "ID inválido"})
+        return
+    }
+    var hc supabase.HealthCheck
+    if err := c.ShouldBindJSON(&hc); err != nil {
+        c.JSON(400, gin.H{"error": err.Error()})
+        return
+    }
+    if err := supabase.UpdateHealthCheck(id, hc); err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(200, gin.H{"message": "health check actualizado"})
+})
 
 	r.Run(":8080")
 }

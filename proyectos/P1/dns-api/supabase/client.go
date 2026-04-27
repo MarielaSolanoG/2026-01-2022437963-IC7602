@@ -18,6 +18,27 @@ type DnsRecord struct {
 	Healthy bool   `json:"healthy"`
 }
 
+// Struct para health check
+type HealthCheck struct {
+    ID            int    `json:"id,omitempty"`
+    DnsRecordID   int    `json:"dns_record_id,omitempty"`
+    CheckType     string `json:"check_type"`
+    Timeout       int    `json:"timeout"`
+    Retries       int    `json:"retries"`
+    Interval      int    `json:"interval"`
+    Path          string `json:"path"`
+    ExpectedCodes any    `json:"expected_codes"`
+}
+
+// DnsRecord con health check incluido
+type DnsRecordFull struct {
+    ID          int          `json:"id,omitempty"`
+    Domain      string       `json:"domain"`
+    Type        string       `json:"type"`
+    IPs         any          `json:"ips"`
+    Healthy     bool         `json:"healthy"`
+    HealthCheck *HealthCheck `json:"health_check,omitempty"`
+}
 // Busca un dominio en Supabase. Devuelve si existe, el registro y un posible error
 func GetRecord(domain string) (bool, *DnsRecord, error) {
 
@@ -69,7 +90,7 @@ func setHeaders(req *http.Request) {
 }
 
 // GET todos los registros
-func GetAllRecords() ([]DnsRecord, error) {
+func GetAllRecords() ([]DnsRecordFull, error) {
     req, err := http.NewRequest("GET", baseURL(), nil)
     if err != nil {
         return nil, err
@@ -81,13 +102,34 @@ func GetAllRecords() ([]DnsRecord, error) {
         return nil, err
     }
     defer resp.Body.Close()
-
     body, _ := io.ReadAll(resp.Body)
 
-    var records []DnsRecord
+    var records []DnsRecordFull
     if err := json.Unmarshal(body, &records); err != nil {
         return nil, err
     }
+
+    // Para cada registro busca su health check en Supabase
+    for i, r := range records {
+        hcURL := fmt.Sprintf("%s/health_checks?dns_record_id=eq.%d&limit=1",
+            os.Getenv("SUPABASE_URL"), r.ID)
+
+        hcReq, _ := http.NewRequest("GET", hcURL, nil)
+        setHeaders(hcReq)
+
+        hcResp, err := http.DefaultClient.Do(hcReq)
+        if err != nil {
+            continue
+        }
+        defer hcResp.Body.Close()
+        hcBody, _ := io.ReadAll(hcResp.Body)
+
+        var hcs []HealthCheck
+        if err := json.Unmarshal(hcBody, &hcs); err == nil && len(hcs) > 0 {
+            records[i].HealthCheck = &hcs[0]
+        }
+    }
+
     return records, nil
 }
 
@@ -248,6 +290,23 @@ func DeleteIpCountry(id int) error {
     setHeaders(req)
     resp, err := http.DefaultClient.Do(req)
     if err != nil { return err }
+    defer resp.Body.Close()
+    return nil
+}
+
+// PATCH actualizar health check por dns_record_id
+func UpdateHealthCheck(dnsRecordID int, hc HealthCheck) error {
+    url := fmt.Sprintf("%s/health_checks?dns_record_id=eq.%d",
+        os.Getenv("SUPABASE_URL"), dnsRecordID)
+
+    payload, _ := json.Marshal(hc)
+    req, _ := http.NewRequest("PATCH", url, bytes.NewBuffer(payload))
+    setHeaders(req)
+
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        return err
+    }
     defer resp.Body.Close()
     return nil
 }

@@ -1,0 +1,439 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   App.css — DNS Management Dashboard
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Reset básico ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── 1. LAYOUT RAÍZ ───────────────────────────────────────────────────────── */
+/* .app ocupa toda la pantalla como columna: topbar arriba, body abajo */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  background: #eef2f7;
+  color: #3d4a5c;
+}
+
+/* ── 2. TOPBAR ────────────────────────────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  padding: 0 24px;
+  background: #2d3a4e;
+  flex-shrink: 0;        /* que no se encoja cuando el body crece */
+}
+
+.topbar__brand {
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+}
+
+.topbar__search {
+  flex: 1;
+  max-width: 320px;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 20px;
+  padding: 6px 16px;
+  color: white;
+  font-size: 13px;
+  outline: none;
+}
+.topbar__search::placeholder { color: rgba(255, 255, 255, 0.45); }
+
+.topbar__icons {
+  margin-left: auto;      /* empuja los íconos al extremo derecho */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Botones icono de la topbar */
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+/* Avatar circular con iniciales */
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #c8a882;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* ── 3. BODY (sidebar + main) ─────────────────────────────────────────────── */
+.body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── 4. SIDEBAR ───────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 220px;
+  background: white;
+  border-right: 0.5px solid #e2e6ea;
+  padding: 12px 0;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Separa "Settings" al fondo del sidebar */
+.sidebar__spacer { flex: 1; }
+
+/* Cada ítem del menú */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 20px;
+  font-size: 13px;
+  color: #6b7a8d;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.15s;
+}
+.nav-item:hover { background: #f5f7fa; }
+
+/* Ítem activo: borde azul izquierdo + texto azul + fondo celeste suave */
+.nav-item--active {
+  color: #3b7de9;
+  font-weight: 500;
+  background: #eaf0fc;
+  border-left-color: #3b7de9;
+}
+
+.nav-icon { font-size: 15px; width: 18px; text-align: center; }
+
+/* ── 5. MAIN ──────────────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* ── 6. CARD (tarjeta blanca genérica) ───────────────────────────────────── */
+.card {
+  background: white;
+  border-radius: 10px;
+  border: 0.5px solid #dde2ea;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.card__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e2a38;
+}
+
+/* Pie de tarjeta: fila de botones separada por línea */
+.card__footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 0.5px solid #eef0f4;
+  align-items: center;
+}
+
+/* ── 7. BOTONES ───────────────────────────────────────────────────────────── */
+.btn-primary {
+  background: #3b7de9;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary:hover { background: #2d6cd4; }
+
+.btn-secondary {
+  background: white;
+  color: #3d4a5c;
+  border: 0.5px solid #dde2ea;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-secondary:hover { background: #f5f7fa; }
+
+/* ── 8. TABLA DNS ─────────────────────────────────────────────────────────── */
+.dns-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.dns-table th {
+  text-align: left;
+  color: #8a94a6;
+  font-weight: 500;
+  font-size: 12px;
+  padding-bottom: 10px;
+  padding-right: 12px;
+}
+
+.dns-table td {
+  padding: 12px 12px 12px 0;
+  border-top: 0.5px solid #eef0f4;
+  vertical-align: middle;
+}
+
+/* Nombre de dominio en azul */
+.dns-table__domain { color: #3b7de9; }
+
+/* Botones de acción dentro de la tabla */
+.action-btn {
+  background: none;
+  border: none;
+  color: #8a94a6;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.action-btn:hover { color: #3b7de9; background: #eaf0fc; }
+
+.action-btn--delete { color: #e55353; }
+.action-btn--delete:hover { background: #fdf0f0; color: #c93c3c; }
+
+/* ── 9. BADGES ────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge--healthy   { background: #27ae6e; color: white; }
+.badge--unhealthy { background: #e55353; color: white; }
+
+/* ── 10. PAGINACIÓN ───────────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.pagination__info { font-size: 13px; color: #8a94a6; margin-right: 4px; }
+
+.page-btn {
+  padding: 5px 12px;
+  border: 0.5px solid #dde2ea;
+  border-radius: 6px;
+  background: white;
+  font-size: 13px;
+  cursor: pointer;
+  color: #3d4a5c;
+}
+.page-btn:hover { background: #f5f7fa; }
+.page-btn--active { background: #3b7de9; color: white; border-color: #3b7de9; }
+
+/* ── 11. GRID INFERIOR (Health + IP) ─────────────────────────────────────── */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* ── 12. HEALTH CHECKS ────────────────────────────────────────────────────── */
+.health__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 0 6px;
+}
+
+.health__domain { font-size: 13px; color: #1e2a38; }
+
+.health__meta {
+  font-size: 12px;
+  color: #8a94a6;
+  margin-top: 4px;
+}
+
+/* ── 13. IP TO COUNTRY ────────────────────────────────────────────────────── */
+.ip-country__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.ip-country__flag { font-size: 20px; }
+
+.ip-country__addr {
+  color: #3b7de9;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ip-country__label {
+  font-size: 12px;
+  color: #8a94a6;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── MODAL ────────────────────────────────────────────────────────────────── */
+/* Fondo oscuro que cubre toda la pantalla */
+.modal-overlay {
+  position: fixed;
+  inset: 0;                          /* top/right/bottom/left: 0 */
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;                     /* encima de todo */
+}
+
+/* Caja blanca del modal */
+.modal {
+  background: white;
+  border-radius: 10px;
+  padding: 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.modal__header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e2a38;
+}
+
+.modal__close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #8a94a6;
+  cursor: pointer;
+  line-height: 1;
+}
+.modal__close:hover { color: #3d4a5c; }
+
+/* Etiquetas de formulario */
+.modal label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #3d4a5c;
+  margin-top: 8px;
+}
+
+/* Inputs y selects del formulario */
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 0.5px solid #dde2ea;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #3d4a5c;
+  outline: none;
+  background: white;
+}
+.form-input:focus { border-color: #3b7de9; }
+
+/* Fila de botones al pie del modal */
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 0.5px solid #eef0f4;
+}
+
+/* ── Dashboard ───────────────────────────────────────────────────────────── */
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.metric-card {
+  background: white;
+  border: 0.5px solid #dde2ea;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #8a94a6;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1e2a38;
+}
+
+.metric-card--healthy  { border-top: 3px solid #27ae6e; }
+.metric-card--unhealthy { border-top: 3px solid #e55353; }

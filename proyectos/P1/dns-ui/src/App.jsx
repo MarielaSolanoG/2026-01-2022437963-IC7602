@@ -312,7 +312,7 @@ function DnsModal({ initial, onSave, onClose, saving, saveError }) {
       <div className="modal" onClick={e => e.stopPropagation()}>
 
         <div className="modal__header">
-          <h2>{isEditing ? 'Editar DNS Record' : 'Add DNS Record'}</h2>
+          <h2>{isEditing ? 'Editar DNS Record' : 'Agregar DNS Record'}</h2>
           <button className="modal__close" onClick={onClose}>×</button>
         </div>
 
@@ -384,7 +384,7 @@ function DnsModal({ initial, onSave, onClose, saving, saveError }) {
         <div className="modal__actions">
           <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancelar</button>
           <button className="btn-primary" onClick={handleSubmit} disabled={saving}>
-            {saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Create Record'}
+            {saving ? 'Guardando...' : isEditing ? 'Guardar cambios' : 'Crear Registro'}
           </button>
         </div>
       </div>
@@ -451,7 +451,7 @@ function DnsRecordsView({ onNavigate }) {
       <div className="card">
         <div className="card__header">
           <h2 className="card__title">DNS Records</h2>
-          <button className="btn-primary" onClick={openCreate}>+ Add DNS Record</button>
+          <button className="btn-primary" onClick={openCreate}>+ Agregar DNS Record</button>
         </div>
 
         {error && <p className="error-msg">⚠ {error}</p>}
@@ -462,8 +462,8 @@ function DnsRecordsView({ onNavigate }) {
           <table className="dns-table">
             <thead>
               <tr>
-                <th>Domain</th><th>Type</th><th>IPs</th>
-                <th>Status</th><th>IP Count</th><th>Actions</th>
+                <th>Dominio</th><th>Tipo</th><th>IPs</th>
+                <th>Estado</th><th>IP Count</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -477,8 +477,8 @@ function DnsRecordsView({ onNavigate }) {
                   <td><StatusBadge healthy={r.healthy} /></td>
                   <td>{Array.isArray(r.ips) ? r.ips.length : 0}</td>
                   <td>
-                    <button className="action-btn" onClick={() => openEdit(r)}>✏ Edit</button>
-                    <button className="action-btn action-btn--delete" onClick={() => handleDelete(r)}>🗑 Delete</button>
+                    <button className="action-btn" onClick={() => openEdit(r)}>✏ Editar</button>
+                    <button className="action-btn action-btn--delete" onClick={() => handleDelete(r)}>🗑 Eliminar</button>
                   </td>
                 </tr>
               ))}
@@ -539,7 +539,7 @@ function HealthChecksPanel({ records }) {
       <div className="card__footer">
         <button className="btn-secondary"
           onClick={() => setIdx(i => Math.max(0, i - 1))} disabled={idx === 0}>
-          ‹ Prev
+          ‹ 
         </button>
         <span className="pagination__info">
           {records.length > 0 ? `${idx + 1} / ${records.length}` : '—'}
@@ -547,7 +547,7 @@ function HealthChecksPanel({ records }) {
         <button className="btn-secondary"
           onClick={() => setIdx(i => Math.min(records.length - 1, i + 1))}
           disabled={idx >= records.length - 1}>
-          Next ›
+           ›
         </button>
       </div>
     </div>
@@ -595,7 +595,7 @@ function IpCountryPanel({ onViewAll }) {
           onClick={() => setIdx(i => Math.min(records.length - 1, i + 1))}
           disabled={idx >= records.length - 1}>›</button>
         <button className="btn-secondary" onClick={onViewAll}>
-          ◎ View Full List
+          ◎ Ver Lista Completa
         </button>
       </div>
     </div>
@@ -624,7 +624,7 @@ function HealthChecksView() {
         <table className="dns-table">
           <thead>
             <tr>
-              <th>Dominio</th><th>Tipo registro</th><th>IPs</th><th>Estado</th>
+              <th>Dominio</th><th>Tipo</th><th>IPs</th><th>Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -713,7 +713,7 @@ function IpCountryView() {
       <div className="card">
         <div className="card__header">
           <h2 className="card__title">IP to Country</h2>
-          <button className="btn-primary" onClick={openCreate}>+ Agregar registro</button>
+          <button className="btn-primary" onClick={openCreate}>+ Agregar IP </button>
         </div>
 
         {loading ? <div className="loading-center"><Spinner /></div> : (
@@ -730,8 +730,8 @@ function IpCountryView() {
                   <td>{flag(r.country_code)} {r.country_code}</td>
                   <td>{r.country_name}</td>
                   <td>
-                    <button className="action-btn" onClick={() => openEdit(r)}>✏ Edit</button>
-                    <button className="action-btn action-btn--delete" onClick={() => handleDelete(r)}>🗑 Delete</button>
+                    <button className="action-btn" onClick={() => openEdit(r)}>✏ Editar</button>
+                    <button className="action-btn action-btn--delete" onClick={() => handleDelete(r)}>🗑 Eliminar</button>
                   </td>
                 </tr>
               ))}

@@ -253,3 +253,23 @@ dns-ui/
 8. El campo `omitempty` en Go es crítico para no interferir con los campos autogenerados por Supabase como el `id`.
 9. CORS debe estar habilitado en el API para que el navegador permita las peticiones desde un origen diferente.
 10. Probar cada tipo de registro por separado facilita identificar errores específicos en la lógica del sistema.
+
+## Vistas 
+
+### DASHBOARD
+![alt text](image-1.png)
+
+### DNS RECORDS
+![alt text](image.png)
+
+#### ADD DNS RECORD
+![alt text](image-4.png)
+
+### HEALTH CHECKS 
+![alt text](image-2.png)
+
+### IP TO COUNTRY 
+![alt text](image-3.png)
+
+#### ADD IP TO COUNTRY 
+![alt text](image-5.png)

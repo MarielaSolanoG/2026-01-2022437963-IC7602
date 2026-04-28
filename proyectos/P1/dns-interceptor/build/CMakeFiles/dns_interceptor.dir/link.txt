@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/dns_interceptor.dir/src/main.cpp.o CMakeFiles/dns_interceptor.dir/src/dns_parser.cpp.o -o dns_interceptor 

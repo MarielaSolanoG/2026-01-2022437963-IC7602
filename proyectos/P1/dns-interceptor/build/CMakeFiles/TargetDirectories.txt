@@ -1,3 +1,0 @@
-/home/joshua/2026-01-2022437963-IC7602/proyectos/P1/dns-interceptor/build/CMakeFiles/dns_interceptor.dir
-/home/joshua/2026-01-2022437963-IC7602/proyectos/P1/dns-interceptor/build/CMakeFiles/edit_cache.dir
-/home/joshua/2026-01-2022437963-IC7602/proyectos/P1/dns-interceptor/build/CMakeFiles/rebuild_cache.dir

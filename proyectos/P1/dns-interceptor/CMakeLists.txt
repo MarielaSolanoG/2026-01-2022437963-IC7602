@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(dns_interceptor
     src/main.cpp
     src/dns_parser.cpp
+    src/udp_server.cpp
 )
 
 target_include_directories(dns_interceptor PRIVATE src)

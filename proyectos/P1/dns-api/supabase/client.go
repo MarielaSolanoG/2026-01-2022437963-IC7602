@@ -1,12 +1,14 @@
 package supabase
 
 import (
-	"bytes"  
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "net/netip"
+    "os"
+    "sync"
 )
 
 // Representa un registro DNS en Supabase
@@ -309,4 +311,245 @@ func UpdateHealthCheck(dnsRecordID int, hc HealthCheck) error {
     }
     defer resp.Body.Close()
     return nil
+}
+
+///Cambios para el DNS Interceptor 
+
+
+// IPEntry representa una IP dentro del campo JSONB "ips".
+// No todos los tipos usan todos los campos.
+type IPEntry struct {
+    IP          string `json:"ip"`
+    Weight      int    `json:"weight,omitempty"`
+    CountryCode string `json:"country_code,omitempty"`
+    Country     string `json:"country,omitempty"`
+    Healthy     *bool  `json:"healthy,omitempty"`
+    RTTMs       int    `json:"rtt_ms,omitempty"`
+    LatencyMS   int    `json:"latency_ms,omitempty"`
+}
+
+// ResolveResponse es la respuesta simple que necesita el DNS Interceptor.
+type ResolveResponse struct {
+    Exists  bool       `json:"exists"`
+    Healthy bool       `json:"healthy,omitempty"`
+    Type    string     `json:"type,omitempty"`
+    IP      string     `json:"ip,omitempty"`
+    TTL     int        `json:"ttl,omitempty"`
+    Record  *DnsRecord `json:"record,omitempty"`
+}
+
+var rrState = struct {
+    sync.Mutex
+    Counters map[string]int
+}{Counters: map[string]int{}}
+
+// ResolveRecord busca un dominio y devuelve la IP final que debe usar el Interceptor.
+func ResolveRecord(domain string, clientIP string) (*ResolveResponse, error) {
+    exists, record, err := GetRecord(domain)
+    if err != nil {
+        return nil, err
+    }
+
+    if !exists || record == nil {
+        return &ResolveResponse{Exists: false}, nil
+    }
+
+    result := &ResolveResponse{
+        Exists:  true,
+        Healthy: record.Healthy,
+        Type:    record.Type,
+        TTL:     300,
+        Record:  record,
+    }
+
+    // Si el registro está unhealthy, el Interceptor debe hacer fallback a /api/dns_resolver.
+    if !record.Healthy {
+        return result, nil
+    }
+
+    ips, err := normalizeIPEntries(record.IPs)
+    if err != nil {
+        // Si el formato de IPs está malo, no tiramos abajo el API.
+        // Marcamos como unhealthy para que el Interceptor haga fallback.
+        result.Healthy = false
+        return result, nil
+    }
+
+    ips = onlyHealthyIPs(ips)
+    if len(ips) == 0 {
+        result.Healthy = false
+        return result, nil
+    }
+
+    selected := selectIPForRecord(record.Type, domain, clientIP, ips)
+    if selected.IP == "" {
+        result.Healthy = false
+        return result, nil
+    }
+
+    result.IP = selected.IP
+    return result, nil
+}
+
+func normalizeIPEntries(raw any) ([]IPEntry, error) {
+    if raw == nil {
+        return nil, fmt.Errorf("el registro no tiene IPs")
+    }
+
+    b, err := json.Marshal(raw)
+    if err != nil {
+        return nil, err
+    }
+
+    var list []IPEntry
+    if err := json.Unmarshal(b, &list); err == nil && len(list) > 0 {
+        return list, nil
+    }
+
+    var single IPEntry
+    if err := json.Unmarshal(b, &single); err == nil && single.IP != "" {
+        return []IPEntry{single}, nil
+    }
+
+    return nil, fmt.Errorf("formato de ips inválido: %s", string(b))
+}
+
+func onlyHealthyIPs(ips []IPEntry) []IPEntry {
+    result := make([]IPEntry, 0, len(ips))
+
+    for _, ip := range ips {
+        if ip.IP == "" {
+            continue
+        }
+
+        // Si healthy no viene dentro de la IP, asumimos que esa IP está disponible.
+        if ip.Healthy == nil || *ip.Healthy {
+            result = append(result, ip)
+        }
+    }
+
+    return result
+}
+
+func selectIPForRecord(recordType, domain, clientIP string, ips []IPEntry) IPEntry {
+    switch recordType {
+    case "single":
+        return ips[0]
+
+    case "multi":
+        return roundRobin(domain+":multi", ips)
+
+    case "weight":
+        return weightedRoundRobin(domain+":weight", ips)
+
+    case "geo":
+        return selectGeo(clientIP, ips)
+
+    case "round-trip":
+        return selectLowestRTT(ips)
+
+    default:
+        // Fallback razonable si viene un tipo desconocido.
+        return ips[0]
+    }
+}
+
+func roundRobin(key string, ips []IPEntry) IPEntry {
+    rrState.Lock()
+    defer rrState.Unlock()
+
+    index := rrState.Counters[key] % len(ips)
+    rrState.Counters[key]++
+
+    return ips[index]
+}
+
+func weightedRoundRobin(key string, ips []IPEntry) IPEntry {
+    expanded := make([]IPEntry, 0)
+
+    for _, ip := range ips {
+        weight := ip.Weight
+        if weight <= 0 {
+            weight = 1
+        }
+
+        for i := 0; i < weight; i++ {
+            expanded = append(expanded, ip)
+        }
+    }
+
+    if len(expanded) == 0 {
+        return ips[0]
+    }
+
+    return roundRobin(key, expanded)
+}
+
+func selectGeo(clientIP string, ips []IPEntry) IPEntry {
+    countryCode, err := LookupCountryCode(clientIP)
+
+    if err == nil && countryCode != "" {
+        for _, ip := range ips {
+            if ip.CountryCode == countryCode || ip.Country == countryCode {
+                return ip
+            }
+        }
+    }
+
+    // Si no se encuentra país o no hay match, se devuelve una IP válida.
+    return roundRobin("geo:fallback", ips)
+}
+
+func selectLowestRTT(ips []IPEntry) IPEntry {
+    best := ips[0]
+    bestRTT := getRTT(best)
+
+    for _, ip := range ips[1:] {
+        currentRTT := getRTT(ip)
+
+        if bestRTT == 0 || (currentRTT > 0 && currentRTT < bestRTT) {
+            best = ip
+            bestRTT = currentRTT
+        }
+    }
+
+    return best
+}
+
+func getRTT(ip IPEntry) int {
+    if ip.RTTMs > 0 {
+        return ip.RTTMs
+    }
+
+    return ip.LatencyMS
+}
+
+// LookupCountryCode intenta encontrar el país de una IP usando la tabla ip_to_country.
+func LookupCountryCode(clientIP string) (string, error) {
+    if clientIP == "" {
+        return "", nil
+    }
+
+    addr, err := netip.ParseAddr(clientIP)
+    if err != nil {
+        return "", err
+    }
+
+    records, err := GetAllIpCountry()
+    if err != nil {
+        return "", err
+    }
+
+    for _, record := range records {
+        prefix, err := netip.ParsePrefix(record.CIDR)
+        if err != nil {
+            continue
+        }
+
+        if prefix.Contains(addr) {
+            return record.CountryCode, nil
+        }
+    }
+
+    return "", nil
 }

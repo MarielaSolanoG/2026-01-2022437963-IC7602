@@ -33,23 +33,23 @@ func main() {
 	})
 
 	// Verifica si un dominio existe en Supabase
+	// client_ip sirve para registros geo y round-trip.
 	r.GET("/api/exists", func(c *gin.Context) {
 		domain := c.Query("domain")
+		clientIP := c.Query("client_ip")
+
 		if domain == "" {
 			c.JSON(400, gin.H{"error": "falta el parámetro domain"})
 			return
 		}
 
-		exists, record, err := supabase.GetRecord(domain)
+		result, err := supabase.ResolveRecord(domain, clientIP)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.JSON(200, gin.H{
-			"exists": exists,
-			"record": record,
-		})
+		c.JSON(200, result)
 	})
 
 	// Recibe un paquete DNS en BASE64, lo reenvía al DNS remoto y devuelve la respuesta en BASE64

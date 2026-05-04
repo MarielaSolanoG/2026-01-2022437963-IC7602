@@ -7,6 +7,10 @@ add_executable(dns_interceptor
     src/main.cpp
     src/dns_parser.cpp
     src/udp_server.cpp
+    src/base64.cpp
+    src/api_client.cpp
+    src/dns_response.cpp
+    src/query_handler.cpp
 )
 
 target_include_directories(dns_interceptor PRIVATE src)

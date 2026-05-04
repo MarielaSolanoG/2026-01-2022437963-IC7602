@@ -4,6 +4,7 @@
 #include <thread>
 #include <stdexcept>
 #include <cstring>
+#include "query_handler.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -20,14 +21,14 @@ void handleRequest(ClientRequest req) {
         if (qr == 0 && opcode == 0) {
             // Query estándar — extraer dominio
             std::string domain = extractDomain(req.buffer, req.len);
-            std::cout << "[STANDARD] ID=" << std::hex << header.id
+            std::cout << "[STANDARD] ID=" << std::hex << header.id << std::dec
                       << " dominio=" << domain << std::endl;
-            // TODO: llamar a handleStandardQuery() de 1B
+            handleStandardQuery(req, domain);
         } else {
             // No estándar — proxy directo al API en BASE64
-            std::cout << "[NON-STANDARD] ID=" << std::hex << header.id
+            std::cout << "[NON-STANDARD] ID=" << std::hex << header.id << std::dec
                       << " opcode=" << (int)opcode << std::endl;
-            // TODO: llamar a handleNonStandardQuery() de 1B
+            handleNonStandardQuery(req);
         }
     } catch (const std::exception& e) {
         std::cerr << "[ERROR] " << e.what() << std::endl;

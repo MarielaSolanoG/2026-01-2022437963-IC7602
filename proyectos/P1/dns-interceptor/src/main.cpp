@@ -1,12 +1,20 @@
-#include <iostream>
 #include "udp_server.h"
 
+#include <cstdlib>
+#include <iostream>
+#include <string>
+
 int main() {
-    try {
-        startServer(8053);  // puerto 5353 para pruebas (53 requiere sudo)
-    } catch (const std::exception& e) {
-        std::cerr << "Error fatal: " << e.what() << std::endl;
-        return 1;
+    int port = 53;
+
+    const char* portEnv = std::getenv("DNS_PORT");
+    if (portEnv != nullptr) {
+        port = std::stoi(portEnv);
     }
+
+    std::cout << "[DNS Interceptor] Escuchando en UDP/" << port << std::endl;
+
+    startServer(port);
+
     return 0;
 }

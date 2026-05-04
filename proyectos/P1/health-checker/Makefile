@@ -1,8 +1,8 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2
+CFLAGS = -Wall -Wextra -O2 -I/usr/include/postgresql
 LIBS = -lcurl -lpthread -lpq
 
-SRC = src/main.c src/checkers.c src/db_client.c src/network_utils.c
+SRC = src/main.c src/checkers.c src/db_client.c
 OUT = bin/health-checker
 
 all: build

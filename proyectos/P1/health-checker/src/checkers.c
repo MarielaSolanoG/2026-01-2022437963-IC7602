@@ -24,3 +24,23 @@ int check_http(const char* url, int timeout_ms, double* latency) {
 
     return (res == CURLE_OK && response_code == 200);
 }
+
+int check_tcp(const char* ip, int port, int timeout_ms) {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) return 0;
+
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    inet_pton(AF_INET, ip, &serv_addr.sin_addr);
+
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof tv);
+
+    int result = connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    close(sockfd);
+    
+    return (result == 0);
+}

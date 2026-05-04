@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <libpq-fe.h>
 #include <curl/curl.h>
+#include <string.h>
 #include "checkers.h"
 
 void save_health_result(PGconn *conn, const char* target_id, int is_healthy, double latency) {

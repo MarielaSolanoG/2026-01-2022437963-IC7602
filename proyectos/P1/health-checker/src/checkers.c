@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <unistd.h>
 
 int check_http(const char* url, int timeout_ms, double* latency) {
     CURL *curl = curl_easy_init();

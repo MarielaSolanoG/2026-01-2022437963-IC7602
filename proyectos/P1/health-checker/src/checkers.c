@@ -12,6 +12,10 @@ int check_http(const char* url, int timeout_ms, double* latency) {
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
 
+    curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+
     clock_gettime(CLOCK_MONOTONIC, &start);
     CURLcode res = curl_easy_perform(curl);
     clock_gettime(CLOCK_MONOTONIC, &end);

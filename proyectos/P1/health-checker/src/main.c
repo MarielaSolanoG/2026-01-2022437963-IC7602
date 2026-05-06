@@ -29,6 +29,13 @@ int main() {
 
     while (1) {
         PGresult *res = PQexec(conn, "SELECT id, ip_address, port, check_type, timeout_ms FROM targets");
+        if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+            fprintf(stderr, "Error en SELECT: %s\n", PQerrorMessage(conn));
+            fflush(stderr);
+            PQclear(res);
+            sleep(30);
+            continue;
+        }
         
         for (int i = 0; i < PQntuples(res); i++) {
             char *id = PQgetvalue(res, i, 0);

@@ -7,6 +7,8 @@
 
 #include "checkers.h"
 
+PGconn* connect_to_db();
+
 static const char* getenv_or_default(const char* name, const char* default_value) {
     const char* value = getenv(name);
     if (value == NULL || strlen(value) == 0) {
@@ -139,6 +141,12 @@ int run_target_check(
 
 int main() {
     curl_global_init(CURL_GLOBAL_ALL);
+
+    PGconn *conn = connect_to_db();
+    if (!conn) {
+        curl_global_cleanup();
+        return 1;
+    }
 
     const char* checker_location_id = getenv_or_default("CHECKER_LOCATION_ID", "CR-01");
     const char* checker_latitude = getenv_or_default("CHECKER_LATITUDE", "9.8644");

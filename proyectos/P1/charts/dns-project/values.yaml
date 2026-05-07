@@ -1,0 +1,17 @@
+image:
+  repository: cortes64
+  pullPolicy: IfNotPresent
+
+database:
+  url: "https://xyz.supabase.co"
+  key: "tu-api-key-de-supabase"
+
+api:
+  port: 8080
+  dns_remote_server: "8.8.8.8"
+
+interceptor:
+  udpPort: 53
+
+healthchecker:
+  interval: "30s"

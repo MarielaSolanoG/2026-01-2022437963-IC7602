@@ -31,3 +31,13 @@ services:
     depends_on:
       - dns-api
     restart: unless-stopped
+
+  health-checker:
+    build:
+      context: ./health-checker
+    container_name: health-checker
+    env_file:
+      - ./health-checker/.env
+    depends_on:
+      - dns-api
+    restart: unless-stopped

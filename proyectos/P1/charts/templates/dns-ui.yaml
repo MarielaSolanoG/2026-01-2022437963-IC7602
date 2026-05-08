@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-ui
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dns-ui
+  template:
+    metadata:
+      labels:
+        app: dns-ui
+    spec:
+      containers:
+        - name: dns-ui
+          image: {{ .Values.ui.image }}
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: dns-ui-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns-ui
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: dns-ui
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: {{ .Values.ui.servicePort }}
+  type: NodePort

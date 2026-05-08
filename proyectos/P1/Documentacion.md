@@ -357,9 +357,54 @@ Ejemplo:
 
 ## Registro `round-trip`
 
-Este tipo de registro debería seleccionar la IP con menor latencia. Esta información está relacionada con los resultados que debe producir el Health Checker.
+Este tipo de registro selecciona la IP con menor latencia disponible. Para esto, el DNS API utiliza la información generada por el Health Checker en la tabla `health_results`.
 
-##########################EDITAR AQUI CUANDO ESTÉ EL HEALTH CHECKER
+El flujo es el siguiente:
+
+```text
+DNS API recibe consulta por un dominio round-trip
+    ↓
+Busca el registro en dns_records
+    ↓
+Consulta los targets asociados al registro
+    ↓
+Lee los últimos resultados de health_results
+    ↓
+Filtra los targets saludables
+    ↓
+Selecciona la IP con menor latency_ms
+    ↓
+Devuelve esa IP al DNS Interceptor
+```
+
+La latencia se mide desde una ubicación simulada del Health Checker. En nuestro caso, se configuró una ubicación en Cartago, Costa Rica:
+
+```text
+checker_location_id = CR-01
+checker_country = CR
+checker_city = Cartago
+```
+
+Esto permite simular que las mediciones de round-trip time se hacen desde una región específica. Para las pruebas, se usaron resultados reales del Health Checker y también se puede simular latencias específicas para comprobar que el DNS API devuelve la IP con menor `latency_ms`.
+
+Ejemplo:
+
+```text
+8.8.8.8  -> 80 ms
+8.8.4.4  -> 20 ms
+```
+
+Entonces para un registro `round-trip`, el API debería devolver:
+
+```json
+{
+  "exists": true,
+  "healthy": true,
+  "type": "round-trip",
+  "ip": "8.8.4.4",
+  "ttl": 300
+}
+```
 
 ## Variables de entorno
 
@@ -723,20 +768,109 @@ Esto nos dice que la aplicación está siendo servida correctamente por Nginx de
 
 ---
 
-# Estado del Health Checker
+# Health Checker
 
-El Health Checker es el componente encargado de revisar si los registros o servicios asociados se encuentran saludables. Este componente debe leer los registros configurados en la base de datos, realizar pruebas TCP o HTTP y actualizar el estado de salud correspondiente.
+## Descripción
 
-Actualmente, este componente todavía se encuentra en desarrollo por parte del equipo. Por esta razón, para realizar pruebas funcionales de los otros componentes, los registros se marcaron manualmente como `healthy = true` en la base de datos.
+El Health Checker es el componente encargado de revisar periódicamente si los servicios asociados a los registros DNS se encuentran disponibles. Este componente fue implementado en C y se ejecuta dentro de un contenedor Docker.
 
-Esto permite validar el funcionamiento de:
+Su función principal es leer los targets configurados en la base de datos, ejecutar pruebas de salud por HTTP o TCP, guardar los resultados en la tabla `health_results` y actualizar el campo `healthy` de la tabla `dns_records`. De esta forma, el estado calculado por el Health Checker afecta directamente el comportamiento del DNS Interceptor.
 
-- DNS API
-- DNS Interceptor
-- DNS UI
-- Base de datos
+El flujo general es el siguiente:
 
-Mientras el Health Checker no esté completo, la salud de los registros se controla manualmente desde Supabase.
+```text
+Health Checker
+    ↓
+Lee targets desde Supabase
+    ↓
+Ejecuta checks HTTP/TCP
+    ↓
+Guarda resultados en health_results
+    ↓
+Actualiza dns_records.healthy
+    ↓
+DNS API lee el estado actualizado
+    ↓
+DNS Interceptor responde localmente o hace fallback
+```
+
+Esto permite que el sistema no responda localmente con una IP que está marcada como no saludable. Si un registro queda como `unhealthy`, el DNS Interceptor deja de responder con la IP configurada y aplica el flujo de fallback hacia `/api/dns_resolver`.
+
+## Responsabilidades principales
+
+El Health Checker se encarga de:
+
+- Leer targets desde la tabla `targets`.
+- Ejecutar pruebas HTTP.
+- Ejecutar pruebas TCP.
+- Aplicar reintentos configurables.
+- Determinar el estado final por mayoría simple.
+- Medir la latencia promedio de cada prueba.
+- Guardar resultados en la tabla `health_results`.
+- Registrar la ubicación simulada del Health Checker.
+- Actualizar el campo `healthy` en `dns_records`.
+- Direccionar registros `round-trip` mediante mediciones de latencia.
+
+## Ubicación simulada del Health Checker
+
+Para simular desde dónde se ejecuta el Health Checker, se configuraron variables de entorno con información geográfica:
+
+```env
+CHECKER_LOCATION_ID=CR-01
+CHECKER_COUNTRY=CR
+CHECKER_CITY=Cartago
+CHECKER_LATITUDE=9.8644
+CHECKER_LONGITUDE=-83.9194
+CHECK_INTERVAL_SECONDS=30
+```
+
+Esta información permite identificar que las pruebas de latencia fueron realizadas desde una ubicación simulada en Cartago, Costa Rica. Esto es útil para los registros tipo `round-trip`, ya que estos pueden usar la latencia medida desde distintas ubicaciones para escoger la IP más conveniente.
+
+## Funcionamiento de los checks
+
+Para cada target, el Health Checker realiza varios intentos. Por ejemplo, si un target tiene `retries = 3`, el sistema ejecuta tres pruebas y luego determina el resultado final. 
+
+Ejemplo:
+
+```text
+3/3 intentos exitosos  -> HEALTHY
+2/3 intentos exitosos  -> HEALTHY
+1/3 intentos exitosos  -> UNHEALTHY
+0/3 intentos exitosos  -> UNHEALTHY
+```
+
+Durante las pruebas se observaron logs como los siguientes:
+
+```text
+[HEALTH_CHECKER] [HTTP] intento 1/3 target=example.com:80 -> UP (68.96ms)
+[HEALTH_CHECKER] [HTTP] intento 2/3 target=example.com:80 -> UP (74.20ms)
+[HEALTH_CHECKER] [HTTP] intento 3/3 target=example.com:80 -> UP (66.79ms)
+[HEALTH_CHECKER] Resultado final target=example.com:80 successes=3/3 -> HEALTHY (avg 69.98ms)
+```
+
+También sprobó con los casos unhealthy:
+
+```text
+[HEALTH_CHECKER] [HTTP] intento 1/3 target=test-http-ok:81 -> DOWN (1.58ms)
+[HEALTH_CHECKER] [HTTP] intento 2/3 target=test-http-ok:81 -> DOWN (1.64ms)
+[HEALTH_CHECKER] [HTTP] intento 3/3 target=test-http-ok:81 -> DOWN (1.62ms)
+[HEALTH_CHECKER] Resultado final target=test-http-ok:81 successes=0/3 -> UNHEALTHY (avg 1.61ms)
+```
+
+## Integración con DNS
+
+La integración se validó con el dominio de prueba `hc-example.com`.
+
+Primero, cuando el registro estaba marcado como saludable, el DNS Interceptor respondió localmente con la IP configurada:
+
+```text
+Name:   hc-example.com
+Address: 9.9.9.9
+```
+
+Luego, al modificar el target para que el Health Checker lo marcara como no saludable, el campo `healthy` de `dns_records` cambió a `false`. Después de eso, al consultar nuevamente el dominio, el Interceptor ya no respondió con `9.9.9.9`, sino que aplicó el flujo de fallback. Como `hc-example.com` no existe en DNS público, la respuesta final fue `NXDOMAIN`.
+
+Esto confirma que el Health Checker no solo guarda resultados, sino que también afecta directamente la resolución DNS del sistema.
 
 ---
 
@@ -889,6 +1023,17 @@ services:
       - "3000:80"
     depends_on:
       - dns-api
+    restart: unless-stopped
+
+  health-checker:
+    build:
+      context: ./health-checker
+    container_name: health-checker
+    env_file:
+      - ./health-checker/.env
+    depends_on:
+      - dns-api
+      - test-http-ok
     restart: unless-stopped
 ```
 
@@ -1267,6 +1412,245 @@ Conclusión:
 La prueba interna con BusyBox es válida porque realiza una consulta DNS real contra el servicio dns-interceptor en el puerto 53 dentro de la red Docker.
 ```
 
+## Prueba 11 — Verificar Health Checker en ejecución
+
+Comando:
+
+```powershell
+docker compose logs -f health-checker
+```
+
+Resultado observado:
+
+```text
+Health Checker iniciado (Proyecto1_IC7602)...
+[HEALTH_CHECKER] location=CR-01 country=CR city=Cartago lat=9.8644 lon=-83.9194
+```
+
+Conclusión:
+
+```text
+El Health Checker se levantó correctamente dentro del contenedor y cargó la ubicación simulada configurada mediante variables de entorno.
+```
+
+---
+
+## Prueba 12 — Health Check HTTP saludable
+
+Para esta prueba se usó el target `example.com:80` y también el servicio local de prueba `test-http-ok:80`.
+
+Resultado observado:
+
+```text
+[HEALTH_CHECKER] [HTTP] intento 1/3 target=example.com:80 -> UP (68.96ms)
+[HEALTH_CHECKER] [HTTP] intento 2/3 target=example.com:80 -> UP (74.20ms)
+[HEALTH_CHECKER] [HTTP] intento 3/3 target=example.com:80 -> UP (66.79ms)
+[HEALTH_CHECKER] Resultado final target=example.com:80 successes=3/3 -> HEALTHY (avg 69.98ms)
+```
+
+También se observó:
+
+```text
+[HEALTH_CHECKER] [HTTP] intento 1/3 target=test-http-ok:80 -> UP (2.69ms)
+[HEALTH_CHECKER] [HTTP] intento 2/3 target=test-http-ok:80 -> UP (2.43ms)
+[HEALTH_CHECKER] [HTTP] intento 3/3 target=test-http-ok:80 -> UP (2.76ms)
+[HEALTH_CHECKER] Resultado final target=test-http-ok:80 successes=3/3 -> HEALTHY (avg 2.63ms)
+```
+
+Conclusión:
+
+```text
+La prueba fue exitosa. El Health Checker pudo realizar checks HTTP, medir latencia, aplicar tres intentos y determinar el resultado final como HEALTHY.
+```
+
+---
+
+## Prueba 13 — Health Check HTTP no saludable
+
+Para esta prueba se usó el servicio `test-http-ok`, pero con un puerto incorrecto: `81`.
+
+Resultado observado:
+
+```text
+[HEALTH_CHECKER] [HTTP] intento 1/3 target=test-http-ok:81 -> DOWN (1.58ms)
+[HEALTH_CHECKER] [HTTP] intento 2/3 target=test-http-ok:81 -> DOWN (1.64ms)
+[HEALTH_CHECKER] [HTTP] intento 3/3 target=test-http-ok:81 -> DOWN (1.62ms)
+[HEALTH_CHECKER] Resultado final target=test-http-ok:81 successes=0/3 -> UNHEALTHY (avg 1.61ms)
+```
+
+Conclusión:
+
+```text
+El Health Checker detectó correctamente un servicio HTTP no disponible y lo marcó como UNHEALTHY por mayoría simple.
+```
+
+---
+
+## Prueba 14 — Health Check TCP saludable
+
+Para esta prueba se usó el servidor DNS público de Google en el puerto 53.
+
+Resultado observado:
+
+```text
+[HEALTH_CHECKER] [TCP] intento 1/3 target=8.8.8.8:53 -> UP (76.63ms)
+[HEALTH_CHECKER] [TCP] intento 2/3 target=8.8.8.8:53 -> UP (87.16ms)
+[HEALTH_CHECKER] [TCP] intento 3/3 target=8.8.8.8:53 -> UP (101.65ms)
+[HEALTH_CHECKER] Resultado final target=8.8.8.8:53 successes=3/3 -> HEALTHY (avg 88.48ms)
+```
+
+Conclusión:
+
+```text
+La prueba TCP fue exitosa. El Health Checker pudo abrir conexión contra 8.8.8.8 en el puerto 53, medir latencia y marcar el target como HEALTHY.
+```
+
+---
+
+## Prueba 15 — Health Check TCP no saludable
+
+Para esta prueba se usó el servicio `test-http-ok`, pero con un puerto cerrado: `9999`.
+
+Resultado observado:
+
+```text
+[HEALTH_CHECKER] [TCP] intento 1/3 target=test-http-ok:9999 -> DOWN (0.95ms)
+[HEALTH_CHECKER] [TCP] intento 2/3 target=test-http-ok:9999 -> DOWN (1.05ms)
+[HEALTH_CHECKER] [TCP] intento 3/3 target=test-http-ok:9999 -> DOWN (0.91ms)
+[HEALTH_CHECKER] Resultado final target=test-http-ok:9999 successes=0/3 -> UNHEALTHY (avg 0.97ms)
+```
+
+Conclusión:
+
+```text
+El Health Checker detectó correctamente un puerto TCP cerrado y marcó el target como UNHEALTHY.
+```
+
+---
+
+## Prueba 16 — Verificar resultados guardados en Supabase
+
+Consulta usada:
+
+```sql
+SELECT 
+  hr.id,
+  t.domain_name,
+  t.ip_address,
+  t.port,
+  t.check_type,
+  hr.is_healthy,
+  hr.latency_ms,
+  hr.checker_location_id,
+  hr.checked_at
+FROM health_results hr
+JOIN targets t ON t.id = hr.target_id
+ORDER BY hr.checked_at DESC
+LIMIT 20;
+```
+
+Resultado esperado:
+
+```text
+La tabla health_results debe mostrar resultados recientes con:
+- is_healthy = true o false
+- latency_ms con la latencia medida
+- checker_location_id = CR-01
+- checked_at con la fecha y hora del check
+```
+
+Conclusión:
+
+```text
+Se confirmó que el Health Checker no solo imprime resultados en logs, sino que también guarda el historial de revisiones en la base de datos.
+```
+
+---
+
+## Prueba 17 — Integración Health Checker con DNS Interceptor
+
+Para esta prueba se creó el dominio `hc-example.com` en `dns_records` con la IP `9.9.9.9`.
+
+Cuando el target asociado estaba saludable, el DNS Interceptor respondió localmente:
+
+```powershell
+docker run --rm --network p1_default busybox nslookup hc-example.com dns-interceptor
+```
+
+Resultado observado:
+
+```text
+Server:         dns-interceptor
+Address:        172.20.0.6:53
+
+Non-authoritative answer:
+Name:   hc-example.com
+Address: 9.9.9.9
+```
+
+Luego se modificó el target asociado para que fallara y el Health Checker actualizó el registro como `healthy = false`. Al consultar nuevamente:
+
+```powershell
+docker run --rm --network p1_default busybox nslookup hc-example.com dns-interceptor
+```
+
+Resultado observado:
+
+```text
+server can't find hc-example.com: NXDOMAIN
+```
+
+Conclusión:
+
+```text
+La prueba fue exitosa. Cuando el registro estaba healthy, el Interceptor respondió localmente con 9.9.9.9. Cuando el Health Checker lo marcó como unhealthy, el Interceptor dejó de responder localmente y aplicó fallback. Como hc-example.com no existe en DNS público, el resultado final fue NXDOMAIN.
+```
+
+---
+
+## Prueba 18 — Registro round-trip usando latencia del Health Checker
+
+Para validar el tipo `round-trip`, se creó un registro con varias IPs candidatas y targets asociados. El Health Checker midió la latencia hacia cada target y guardó los resultados en `health_results`.
+
+Flujo validado:
+
+```text
+DNS API recibe consulta por dominio round-trip
+    ↓
+Consulta targets asociados al dns_record_id
+    ↓
+Lee últimos resultados en health_results
+    ↓
+Filtra targets saludables
+    ↓
+Selecciona la IP con menor latency_ms
+    ↓
+Devuelve esa IP al DNS Interceptor
+```
+
+Consulta de ejemplo al API:
+
+```powershell
+curl.exe "http://localhost:8080/api/exists?domain=roundtrip-health.com&client_ip=127.0.0.1"
+```
+
+Resultado esperado:
+
+```json
+{
+  "exists": true,
+  "healthy": true,
+  "type": "round-trip",
+  "ip": "IP_CON_MENOR_LATENCIA",
+  "ttl": 300
+}
+```
+
+Conclusión:
+
+```text
+La prueba valida que el registro round-trip puede usar la información generada por el Health Checker para seleccionar la IP saludable con menor latencia.
+```
 ---
 
 # Problemas encontrados y soluciones

@@ -41,3 +41,10 @@ services:
     depends_on:
       - dns-api
     restart: unless-stopped
+
+  test-http-ok:
+    image: nginx:alpine
+    container_name: test-http-ok
+    ports:
+      - "8088:80"
+    restart: unless-stopped

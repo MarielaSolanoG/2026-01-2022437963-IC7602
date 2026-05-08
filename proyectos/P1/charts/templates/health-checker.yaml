@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: health-checker
+  namespace: {{ .Values.namespace }}
 spec:
   replicas: 1
   selector:
@@ -14,5 +15,7 @@ spec:
     spec:
       containers:
         - name: health-checker
-          image: health-checker:latest
-          env:
+          image: {{ .Values.healthChecker.image }}
+          envFrom:
+            - secretRef:
+                name: health-checker-secret

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-api
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dns-api
+  template:
+    metadata:
+      labels:
+        app: dns-api
+    spec:
+      containers:
+        - name: dns-api
+          image: {{ .Values.api.image }}
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: dns-api-secret
+            - configMapRef:
+                name: dns-api-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns-api
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: dns-api
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

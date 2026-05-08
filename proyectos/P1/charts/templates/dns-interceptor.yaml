@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-interceptor
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dns-interceptor
+  template:
+    metadata:
+      labels:
+        app: dns-interceptor
+    spec:
+      containers:
+        - name: dns-interceptor
+          image: {{ .Values.interceptor.image }}
+          ports:
+            - containerPort: 53
+              protocol: UDP
+          envFrom:
+            - configMapRef:
+                name: dns-interceptor-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns-interceptor
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: dns-interceptor
+  ports:
+    - protocol: UDP
+      port: 53
+      targetPort: 53
+      nodePort: {{ .Values.interceptor.servicePort }}
+  type: NodePort

@@ -381,7 +381,14 @@ func ResolveRecord(domain string, clientIP string) (*ResolveResponse, error) {
         return result, nil
     }
 
-    selected := selectIPForRecord(record.Type, domain, clientIP, ips)
+    var selected IPEntry
+
+    if record.Type == "round-trip" {
+        selected = selectRoundTripFromHealthResults(record.ID, ips)
+    } else {
+        selected = selectIPForRecord(record.Type, domain, clientIP, ips)
+    }
+
     if selected.IP == "" {
         result.Healthy = false
         return result, nil
@@ -552,4 +559,128 @@ func LookupCountryCode(clientIP string) (string, error) {
     }
 
     return "", nil
+}
+
+
+type TargetForRoundTrip struct {
+	ID        string `json:"id"`
+	IPAddress string `json:"ip_address"`
+}
+
+type HealthResultForRoundTrip struct {
+	IsHealthy bool    `json:"is_healthy"`
+	LatencyMS float64 `json:"latency_ms"`
+	CheckedAt string  `json:"checked_at"`
+}
+
+func selectRoundTripFromHealthResults(dnsRecordID int, ips []IPEntry) IPEntry {
+	latencies, err := GetLatestHealthyLatenciesByIP(dnsRecordID)
+	if err != nil || len(latencies) == 0 {
+		// Si no hay resultados del Health Checker, usamos la lógica anterior.
+		return selectLowestRTT(ips)
+	}
+
+	var best IPEntry
+	bestLatency := 0.0
+	found := false
+
+	for _, ip := range ips {
+		latency, ok := latencies[ip.IP]
+		if !ok {
+			continue
+		}
+
+		if !found || latency < bestLatency {
+			best = ip
+			bestLatency = latency
+			found = true
+		}
+	}
+
+	if found {
+		return best
+	}
+
+	// Si ninguna IP del registro tiene resultado asociado, volvemos al fallback anterior.
+	return selectLowestRTT(ips)
+}
+
+func GetLatestHealthyLatenciesByIP(dnsRecordID int) (map[string]float64, error) {
+	result := map[string]float64{}
+
+	targetsURL := fmt.Sprintf(
+		"%s/targets?dns_record_id=eq.%d&select=id,ip_address",
+		os.Getenv("SUPABASE_URL"),
+		dnsRecordID,
+	)
+
+	req, err := http.NewRequest("GET", targetsURL, nil)
+	if err != nil {
+		return result, err
+	}
+	setHeaders(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return result, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode >= 300 {
+		return result, fmt.Errorf("error consultando targets: %s", string(body))
+	}
+
+	var targets []TargetForRoundTrip
+	if err := json.Unmarshal(body, &targets); err != nil {
+		return result, err
+	}
+
+	for _, target := range targets {
+		if target.ID == "" || target.IPAddress == "" {
+			continue
+		}
+
+		healthURL := fmt.Sprintf(
+			"%s/health_results?target_id=eq.%s&select=is_healthy,latency_ms,checked_at&order=checked_at.desc&limit=1",
+			os.Getenv("SUPABASE_URL"),
+			target.ID,
+		)
+
+		hReq, err := http.NewRequest("GET", healthURL, nil)
+		if err != nil {
+			continue
+		}
+		setHeaders(hReq)
+
+		hResp, err := http.DefaultClient.Do(hReq)
+		if err != nil {
+			continue
+		}
+
+		hBody, _ := io.ReadAll(hResp.Body)
+		hResp.Body.Close()
+
+		if hResp.StatusCode >= 300 {
+			continue
+		}
+
+		var healthResults []HealthResultForRoundTrip
+		if err := json.Unmarshal(hBody, &healthResults); err != nil {
+			continue
+		}
+
+		if len(healthResults) == 0 {
+			continue
+		}
+
+		latest := healthResults[0]
+
+		if latest.IsHealthy && latest.LatencyMS > 0 {
+			result[target.IPAddress] = latest.LatencyMS
+		}
+	}
+
+	return result, nil
 }

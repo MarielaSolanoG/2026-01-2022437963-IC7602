@@ -816,7 +816,6 @@ export default function App() {
             { icon: '≡',  label: 'DNS Records' },
             { icon: '〜', label: 'Health Checks' },
             { icon: '◎',  label: 'IP to Country' },
-            { icon: '≣',  label: 'Logs' },
           ].map(({ icon, label }) => (
             <NavItem key={label} icon={icon} label={label}
               active={activePage === label}

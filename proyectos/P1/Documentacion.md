@@ -41,7 +41,7 @@ Semestre: I Semestre 2026
 
 Este proyecto consiste en implementar un sistema DNS 2.0 utilizando servicios de capa de aplicación sobre protocolos de transporte TCP y UDP. La idea principal es construir un sistema capaz de recibir consultas DNS reales, revisar si el dominio consultado existe dentro de una base de datos propia y responder con una IP configurada por el sistema. Si el dominio no existe en la base de datos, la consulta se reenvía a un DNS público por medio del DNS API.
 
-El sistema está dividido en varios componentes. El DNS Interceptor recibe las consultas DNS por UDP, analiza los paquetes siguiendo la estructura de DNS y decide qué flujo aplicar. El DNS API consulta la base de datos y también permite reenviar paquetes DNS hacia un servidor DNS remoto. La DNS UI permite administrar visualmente los registros DNS desde una aplicación web. Además, el proyecto contempla un Health Checker, encargado de revisar el estado de los registros, aunque este componente todavía se encuentra en desarrollo.
+El sistema está dividido en varios componentes. El DNS Interceptor recibe las consultas DNS por UDP, analiza los paquetes siguiendo la estructura de DNS y decide qué flujo aplicar. El DNS API consulta la base de datos y también permite reenviar paquetes DNS hacia un servidor DNS remoto. La DNS UI permite administrar visualmente los registros DNS desde una aplicación web. Además, el proyecto contempla un Health Checker, encargado de revisar el estado de los registros y actualizar su disponibilidad automáticamente.
 
 La solución se ejecuta usando Docker Compose, lo cual permite levantar los servicios principales con un solo comando. Esto facilita la automatización del proyecto y evita tener que ejecutar cada componente manualmente.
 
@@ -1769,17 +1769,17 @@ Se verificó que el flujo del Interceptor era correcto, ya que los logs mostraro
 
 # Conclusiones
 
-1. 
+1. Implementar un sistema DNS desde cero permitió comprender en profundidad cómo funciona el protocolo DNS a nivel de paquetes, incluyendo la estructura del header, el parseo de queries y la construcción manual de respuestas válidas.
 
-2. 
+2. Trabajar con múltiples tecnologías en paralelo (Go, C++, React, Docker, Supabase) demostró la importancia de definir interfaces claras entre componentes desde el inicio, ya que cualquier cambio en el API afectaba directamente al Interceptor y a la UI.
 
-3. 
+3. El uso de Docker Compose simplificó significativamente el proceso de integración, ya que permitió levantar todos los servicios con un solo comando y reproducir el entorno de manera consistente entre los integrantes del equipo.
 
 4. El mapeo `8053:53/udp` es útil para pruebas locales porque evita conflictos con servicios DNS del sistema operativo.
 
-5. 
+5. El problema del timeout con el DNS remoto evidenció la importancia de separar correctamente los logs por componente, ya que esto permitió identificar con precisión que el flujo del Interceptor era correcto y que el fallo estaba en la comunicación del DNS API con el servidor externo.
 
-6. 
+6. El timeout al consultar el DNS remoto 8.8.8.8 mostró que la conectividad UDP desde contenedores Docker hacia Internet puede verse afectada por restricciones de red o firewall, lo que debe considerarse al diseñar sistemas que dependan de servicios externos.
 
 7. La separación entre Interceptor y API mejora el diseño, porque cada componente tiene una responsabilidad más clara.
 
@@ -1787,8 +1787,8 @@ Se verificó que el flujo del Interceptor era correcto, ya que los logs mostraro
 
 9. La prueba con BusyBox dentro de la red Docker es válida porque usa una consulta DNS real contra el servicio `dns-interceptor`.
 
-10. 
+10. El Health Checker demostró ser un componente clave para la resiliencia del sistema, ya que al marcar registros como unhealthy el Interceptor puede aplicar fallback automáticamente sin intervención manual.
 
-11. 
+11. Implementar múltiples tipos de registros (single, multi, weight, geo, round-trip) permitió entender cómo los sistemas DNS reales aplican estrategias de balanceo y distribución geográfica del tráfico.
 
-12. 
+12. Realizar las pruebas por capas, comenzando por el API de forma aislada y avanzando hasta la integración completa, facilitó la detección temprana de errores y redujo el tiempo necesario para depurar problemas en el sistema.

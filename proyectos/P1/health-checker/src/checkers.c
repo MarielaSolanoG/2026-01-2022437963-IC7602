@@ -82,11 +82,6 @@ int check_http(
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
-    if (user && strlen(user) > 0) {
-        curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-        curl_easy_setopt(curl, CURLOPT_USERNAME, user);
-        curl_easy_setopt(curl, CURLOPT_PASSWORD, pass);
-    }
 
     // Evita que el HTML de la respuesta se imprima en los logs.
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, discard_body);

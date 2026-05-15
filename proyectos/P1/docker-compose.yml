@@ -1,0 +1,50 @@
+services:
+  dns-api:
+    build:
+      context: ./dns-api
+    container_name: dns-api
+    env_file:
+      - ./dns-api/.env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  dns-interceptor:
+    build:
+      context: ./dns-interceptor
+    container_name: dns-interceptor
+    environment:
+      DNS_API_URL: http://dns-api:8080
+      DNS_PORT: 53
+    ports:
+      - "8053:53/udp"
+    depends_on:
+      - dns-api
+    restart: unless-stopped
+
+  dns-ui:
+    build:
+      context: ./dns-ui
+    container_name: dns-ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - dns-api
+    restart: unless-stopped
+
+  health-checker:
+    build:
+      context: ./health-checker
+    container_name: health-checker
+    env_file:
+      - ./health-checker/.env
+    depends_on:
+      - dns-api
+    restart: unless-stopped
+
+  test-http-ok:
+    image: nginx:alpine
+    container_name: test-http-ok
+    ports:
+      - "8088:80"
+    restart: unless-stopped

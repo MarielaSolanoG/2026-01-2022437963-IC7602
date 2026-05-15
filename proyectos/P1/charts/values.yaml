@@ -1,0 +1,37 @@
+namespace: dns-system
+
+api:
+  image: cortes64/dns-api:latest
+  port: 8080
+
+  env:
+    DNS_REMOTE_SERVER: "8.8.8.8"
+
+  secrets:
+    SUPABASE_URL: "https://dvplejlmeilcwmsuwsdn.supabase.co/rest/v1/"
+    SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2cGxlamxtZWlsY3dtc3V3c2RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNzk5NTQsImV4cCI6MjA5MTg1NTk1NH0.WEtmsygYG0RmFNr1FGMdX7wE9CEF8U5iUqINTMTa8CI"
+
+
+
+interceptor:
+  image: cortes64/dns-interceptor:latest
+  port: 53
+  servicePort: 30053
+
+  env:
+    DNS_API_URL: "http://dns-api:8080"
+    DNS_PORT: "53"
+
+ui:
+  image: cortes64/dns-ui:latest
+  port: 80
+  servicePort: 30080
+
+  env:
+    VITE_API_URL: "http://dns-api:8080"
+
+healthChecker:
+  image: cortes64/health-checker:latest
+
+  secrets:
+    DATABASE_URL: "postgresql://postgres.dvplejlmeilcwmsuwsdn:AvFf2VRHSJjnGIRa@aws-1-us-west-2.pooler.supabase.com:5432/postgres"

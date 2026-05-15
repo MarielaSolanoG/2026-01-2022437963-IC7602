@@ -9,14 +9,14 @@ import (
 func ForwardQuery(packet []byte, remoteServer string) ([]byte, error) {
 
 	// Abre una conexión UDP al servidor DNS remoto (ej: 8.8.8.8:53)
-	conn, err := net.DialTimeout("udp", remoteServer+":53", 5*time.Second)
+	conn, err := net.DialTimeout("udp", remoteServer+":53", 10*time.Second)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
 	// Tiempo máximo de espera para enviar y recibir
-	conn.SetDeadline(time.Now().Add(5 * time.Second))
+	conn.SetDeadline(time.Now().Add(10 * time.Second))
 
 	// Envía el paquete DNS
 	_, err = conn.Write(packet)

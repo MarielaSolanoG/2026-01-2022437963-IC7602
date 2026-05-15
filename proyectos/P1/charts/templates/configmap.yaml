@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-api-config
+  namespace: {{ .Values.namespace }}
+data:
+  DNS_REMOTE_SERVER: {{ .Values.api.env.DNS_REMOTE_SERVER | quote }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-interceptor-config
+  namespace: {{ .Values.namespace }}
+data:
+  DNS_API_URL: {{ .Values.interceptor.env.DNS_API_URL | quote }}
+  DNS_PORT: {{ .Values.interceptor.env.DNS_PORT | quote }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-ui-config
+  namespace: {{ .Values.namespace }}
+data:
+  VITE_API_URL: {{ .Values.ui.env.VITE_API_URL | quote }}

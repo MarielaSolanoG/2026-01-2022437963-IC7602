@@ -1,7 +1,7 @@
 use serde::Deserialize;
-use std::fs;
+use std::error::Error;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct DomainConfig {
     pub domain: String,
     pub ttl: u32,
@@ -11,16 +11,16 @@ pub struct DomainConfig {
     pub api_key: String,
 }
 
-pub fn load_config() -> DomainConfig {
+pub async fn load_config(domain: &str) -> Result<DomainConfig, Box<dyn Error>> {
+    let base_url = std::env::var("CONFIG_API_URL")
+        .unwrap_or_else(|_| "http://localhost:3000".to_string());
 
-    let json =
-        fs::read_to_string(
-            "config.json"
-        )
-        .expect("No se encontró config.json");
+    let url = format!("{}/domains/{}/config", base_url, domain);
 
-    serde_json::from_str(
-        &json
-    )
-    .expect("JSON inválido")
+    let config = reqwest::get(url)
+        .await?
+        .json::<DomainConfig>()
+        .await?;
+
+    Ok(config)
 }

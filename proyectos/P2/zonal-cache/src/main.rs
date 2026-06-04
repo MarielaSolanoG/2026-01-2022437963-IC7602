@@ -17,7 +17,24 @@ use axum::{
 use std::env;
 
 async fn auth_middleware(request: Request, next: Next) -> Result<Response, StatusCode> {
-    let config = load_config();
+    let domain = request
+        .headers()
+        .get("host")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("example.com")
+        .split(':')
+        .next()
+        .unwrap_or("example.com");
+
+    println!("Dominio detectado: {}", domain);
+
+    let config = match load_config(domain).await {
+        Ok(config) => config,
+        Err(error) => {
+            println!("Error: {:?}", error);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
 
     if config.auth_type == "none" {
         return Ok(next.run(request).await);
@@ -52,17 +69,18 @@ async fn auth_middleware(request: Request, next: Next) -> Result<Response, Statu
             }
         }
 
-        let redirect = Redirect::temporary(
-            "http://localhost:5173/auth?domain=example.com&redirect=http://localhost:8080",
+        let login_url = format!(
+            "http://localhost:5173/auth?domain={}&redirect=http://localhost:8080",
+            domain
         );
-
-        return Ok(redirect.into_response());
+        return Ok(Redirect::to(&login_url).into_response());
     }
+
     Err(StatusCode::UNAUTHORIZED)
 }
 
 async fn protected_resource() -> &'static str {
-    "Acceso permitido según config.json"
+    "Acceso permitido según Firebase/API"
 }
 
 #[tokio::main]

@@ -10,3 +10,29 @@ pub fn validate_api_key(headers: &HeaderMap, expected_key: &str) -> bool {
         _ => false,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::{HeaderMap, HeaderValue};
+
+    #[test]
+    fn api_key_correcta_retorna_true() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-api-key", HeaderValue::from_static("abc123"));
+
+        let result = validate_api_key(&headers, "abc123");
+
+        assert!(result);
+    }
+
+    #[test]
+    fn api_key_incorrecta_retorna_false() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-api-key", HeaderValue::from_static("mala"));
+
+        let result = validate_api_key(&headers, "abc123");
+
+        assert!(!result);
+    }
+}

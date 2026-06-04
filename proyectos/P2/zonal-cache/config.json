@@ -3,6 +3,6 @@
   "ttl": 3600,
   "cache_size_mb": 100,
   "replacement_policy": "LRU",
-  "auth_type": "api_key",
+  "auth_type": "session",
   "api_key": "abc123"
 }

@@ -4,6 +4,7 @@ use std::thread;
 mod dns_parser;
 mod geo_locator;
 mod query_handler;
+mod dns_response;
 
 fn main() -> std::io::Result<()> {
     let port = std::env::var("DNS_PORT").unwrap_or_else(|_| "53".to_string());

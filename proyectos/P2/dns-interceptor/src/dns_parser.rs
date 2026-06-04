@@ -10,7 +10,6 @@ pub fn parse_header(buffer: &[u8]) -> Result<DNSHeader, &'static str> {
     }
 
     let id = u16::from_be_bytes([buffer[0], buffer[1]]);
-
     let flags = u16::from_be_bytes([buffer[2], buffer[3]]);
     
     let qr = ((flags >> 15) & 0x1) as u8;
@@ -30,7 +29,7 @@ pub fn extract_domain(buffer: &[u8]) -> Result<String, &'static str> {
             break;
         }
 
-        if !domain.empty() {
+        if !domain.is_empty() {
             domain.push('.');
         }
 

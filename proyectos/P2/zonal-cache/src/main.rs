@@ -3,13 +3,13 @@ mod auth;
 
 use firebase::config::load_config;
 use auth::api_key::validate_api_key;
-use auth::session::{get_session_cookie, validate_session_mock};
+use auth::session::{get_session_cookie, validate_session_token};
 
 use axum::{
     extract::Request,
     http::StatusCode,
     middleware::{self, Next},
-    response::Response,
+    response::{IntoResponse, Redirect, Response},
     routing::get,
     Router,
 };
@@ -32,15 +32,32 @@ async fn auth_middleware(request: Request, next: Next) -> Result<Response, Statu
     }
 
     if config.auth_type == "session" {
-        let session = get_session_cookie(request.headers());
+        if let Some(value) = get_session_cookie(request.headers()) {
+            if validate_session_token(&value) {
+                return Ok(next.run(request).await);
+            }
 
-        return match session {
-            Some(value) if validate_session_mock(&value) => Ok(next.run(request).await),
-            Some(_) => Err(StatusCode::UNAUTHORIZED),
-            None => Err(StatusCode::FOUND),
-        };
-    }    
+            return Err(StatusCode::UNAUTHORIZED);
+        }
 
+        if let Some(query) = request.uri().query() {
+            for param in query.split('&') {
+                if let Some(token) = param.strip_prefix("token=") {
+                    if validate_session_token(token) {
+                        return Ok(next.run(request).await);
+                    }
+
+                    return Err(StatusCode::UNAUTHORIZED);
+                }
+            }
+        }
+
+        let redirect = Redirect::temporary(
+            "http://localhost:5173/auth?domain=example.com&redirect=http://localhost:8080",
+        );
+
+        return Ok(redirect.into_response());
+    }
     Err(StatusCode::UNAUTHORIZED)
 }
 
@@ -59,9 +76,7 @@ async fn main() {
         .route("/", get(protected_resource))
         .layer(middleware::from_fn(auth_middleware));
 
-    let listener = tokio::net::TcpListener::bind(&address)
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
 
     println!("Servidor iniciado en http://localhost:{}", port);
 

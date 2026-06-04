@@ -18,6 +18,6 @@ pub fn get_session_cookie(headers: &HeaderMap) -> Option<String> {
     None
 }
 
-pub fn validate_session_mock(session: &str) -> bool {
-    session == "valid-session-123"
+pub fn validate_session_token(token: &str) -> bool {
+    token.starts_with("session-") || token == "valid-session-123"
 }

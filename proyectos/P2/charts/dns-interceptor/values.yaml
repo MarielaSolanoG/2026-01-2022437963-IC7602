@@ -1,0 +1,16 @@
+replicaCount: 1
+
+image:
+  repository: cortes64/dns-interceptor
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 53
+  targetPort: 53
+  nodePort: 30053
+
+env:
+  dnsPort: "53"
+  dnsApiUrl: "http://zonal-cache-service:8080"

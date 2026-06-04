@@ -1,6 +1,8 @@
 mod firebase;
 mod auth;
+mod cache;
 
+use cache::cache_handler;
 use firebase::config::load_config;
 use auth::api_key::validate_api_key;
 use auth::session::{get_session_cookie, validate_session_token};
@@ -31,8 +33,8 @@ async fn auth_middleware(request: Request, next: Next) -> Result<Response, Statu
     let config = match load_config(domain).await {
         Ok(config) => config,
         Err(error) => {
-            println!("Error: {:?}", error);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            println!("Error cargando configuración del dominio {}: {:?}", domain, error);
+            return Err(StatusCode::SERVICE_UNAVAILABLE);
         }
     };
 
@@ -91,7 +93,7 @@ async fn main() {
     let address = format!("0.0.0.0:{}", port);
 
     let app = Router::new()
-        .route("/", get(protected_resource))
+        .route("/", get(cache_handler))
         .layer(middleware::from_fn(auth_middleware));
 
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();

@@ -1,0 +1,26 @@
+replicaCount: 1
+
+image:
+  repository: java-rest-api
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  name: java-rest-api-service
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+container:
+  port: 8080
+
+env:
+  serverPort: "8080"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"

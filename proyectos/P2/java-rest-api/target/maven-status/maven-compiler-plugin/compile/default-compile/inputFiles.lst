@@ -1,0 +1,6 @@
+/app/src/main/java/redes/api/JavaRestApiApplication.java
+/app/src/main/java/redes/api/controller/HealthController.java
+/app/src/main/java/redes/api/controller/ProductController.java
+/app/src/main/java/redes/api/dto/ProductRequest.java
+/app/src/main/java/redes/api/model/Product.java
+/app/src/main/java/redes/api/service/ProductService.java

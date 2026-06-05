@@ -82,6 +82,26 @@ function DomainsPage() {
     }
   }
 
+  const handleVerifyDomain = async (domainName) => {
+    try {
+        const data = await api.post(`/domains/${domainName}/verify`)
+        if (data.verified) {
+            setDomains((prev) =>
+                prev.map((d) =>
+                    (d.name || d.domain) === domainName
+                        ? { ...d, verified: true }
+                        : d
+                )
+            )
+            alert('¡Dominio verificado correctamente!')
+        } else {
+            alert(data.message)
+        }
+    } catch (err) {
+        alert('Error al verificar el dominio')
+    }
+  }
+
   const handleLogout = async () => {
     try {
       await api.post('/auth/logout')
@@ -197,13 +217,23 @@ function DomainsPage() {
                 >
                   <div>
                     <p className="font-medium text-gray-800">{domain.name || domain.domain}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      domain.verified
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {domain.verified ? 'Verificado' : 'Pendiente verificación'}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            domain.verified
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                            {domain.verified ? 'Verificado' : 'Pendiente verificación'}
+                        </span>
+                        {!domain.verified && (
+                            <button
+                                onClick={() => handleVerifyDomain(domain.name || domain.domain)}
+                                className="text-xs text-blue-600 hover:underline"
+                            >
+                                Verificar ahora
+                            </button>
+                        )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Link

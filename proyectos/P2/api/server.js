@@ -458,6 +458,56 @@ app.delete("/urls/:urlId/users/:userId", requireAuth, async (req, res) => {
     }
 });
 
+/*
+VERIFICAR DOMINIO POR REGISTRO TXT
+*/
+app.post("/domains/:domain/verify", requireAuth, async (req, res) => {
+    try {
+        const { domain } = req.params;
+
+        const doc = await db.collection("domains").doc(domain).get();
+
+        if (!doc.exists) {
+            return res.status(404).json({ message: "Dominio no encontrado" });
+        }
+
+        const domainData = doc.data();
+
+        if (!domainData.txtRecord) {
+            return res.status(400).json({ message: "Este dominio no tiene txtRecord generado" });
+        }
+
+        const dns = require("dns").promises;
+
+        let txtRecords = [];
+        try {
+            txtRecords = await dns.resolveTxt(domain);
+        } catch (dnsError) {
+            return res.status(200).json({
+                verified: false,
+                message: "No se encontraron registros TXT para este dominio"
+            });
+        }
+
+        const allRecords = txtRecords.flat();
+        const isVerified = allRecords.includes(domainData.txtRecord);
+
+        if (isVerified) {
+            await db.collection("domains").doc(domain).update({ verified: true });
+        }
+
+        res.json({
+            verified: isVerified,
+            message: isVerified
+                ? "Dominio verificado correctamente"
+                : "Registro TXT no encontrado. Asegurate de haberlo agregado a tu DNS."
+        });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "Error verificando dominio" });
+    }
+});
+
 if (process.env.NODE_ENV !== "production") {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {

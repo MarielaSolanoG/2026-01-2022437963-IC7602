@@ -2,14 +2,163 @@ use axum::{routing::get, Router, extract::Query, response::IntoResponse, http::S
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use serde::Deserialize;
+use std::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
+mod firebase;
+use firebase::config::load_config;
 
-struct EntradaCache {
-    ruta_en_disco: String,
-    tamanio_bytes: u64,
+
+// ── Política de reemplazo ─────────────────────────────────────────────────────
+#[derive(Clone, Debug)]
+enum Politica {
+    FIFO,
+    LRU,
+    MRU,
+    LFU,
+    Random,
 }
 
-type EstadoCache = Arc<Mutex<HashMap<String, EntradaCache>>>;
+impl Politica {
+    fn desde_string(s: &str) -> Politica {
+        match s {
+            "LRU"    => Politica::LRU,
+            "MRU"    => Politica::MRU,
+            "LFU"    => Politica::LFU,
+            "Random" => Politica::Random,
+            _        => Politica::FIFO,
+        }
+    }
+}
 
+// ── Entrada del caché ─────────────────────────────────────────────────────────
+#[derive(Clone)]
+struct EntradaCache {
+    ruta_en_disco:   String,
+    tamanio_bytes:   u64,
+    insertado_en:    u64,   // timestamp — para FIFO
+    ultimo_acceso:   u64,   // timestamp — para LRU y MRU
+    frecuencia:      u64,   // contador   — para LFU
+}
+
+// ── Estado del caché ──────────────────────────────────────────────────────────
+struct Cache {
+    entradas:        HashMap<String, EntradaCache>,
+    tamanio_actual:  u64,
+    tamanio_maximo:  u64,   // en bytes — vendrá de Firebase vía Persona 3
+    politica:        Politica,
+}
+
+impl Cache {
+    fn nuevo(tamanio_maximo: u64, politica: Politica) -> Cache {
+        Cache {
+            entradas: HashMap::new(),
+            tamanio_actual: 0,
+            tamanio_maximo,
+            politica,
+        }
+    }
+
+    #[cfg(test)]
+    fn insertar_directo(&mut self, url: String, tamanio: u64) {
+        while self.tamanio_actual + tamanio > self.tamanio_maximo && !self.entradas.is_empty() {
+            self.evictar();
+        }
+        let ahora = Self::ahora();
+        self.entradas.insert(url, EntradaCache {
+            ruta_en_disco: String::from(""),
+            tamanio_bytes: tamanio,
+            insertado_en:  ahora,
+            ultimo_acceso: ahora,
+            frecuencia:    1,
+        });
+        self.tamanio_actual += tamanio;
+    }    
+
+    pub fn ahora() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    }
+
+    // Buscar una entrada y actualizar su metadata
+    fn get(&mut self, url: &str) -> Option<EntradaCache> {
+        if let Some(entrada) = self.entradas.get_mut(url) {
+            entrada.ultimo_acceso = Self::ahora();
+            entrada.frecuencia   += 1;
+            Some(entrada.clone())
+        } else {
+            None
+        }
+    }
+
+    // Insertar nueva entrada, aplicando reemplazo si es necesario
+    fn insertar(&mut self, url: String, ruta: String, tamanio: u64) {
+        // Si ya existe, actualizar
+        if self.entradas.contains_key(&url) {
+            self.tamanio_actual -= self.entradas[&url].tamanio_bytes;
+        }
+
+        // Mientras no haya espacio, aplicar política de reemplazo
+        while self.tamanio_actual + tamanio > self.tamanio_maximo && !self.entradas.is_empty() {
+            self.evictar();
+        }
+
+        let ahora = Self::ahora();
+        self.entradas.insert(url, EntradaCache {
+            ruta_en_disco: ruta,
+            tamanio_bytes: tamanio,
+            insertado_en:  ahora,
+            ultimo_acceso: ahora,
+            frecuencia:    1,
+        });
+        self.tamanio_actual += tamanio;
+    }
+
+    // Decidir cuál entrada borrar según la política
+    fn evictar(&mut self) {
+        let url_a_borrar = match self.politica {
+
+            Politica::FIFO => self.entradas
+                .iter()
+                .min_by_key(|(_, e)| e.insertado_en)
+                .map(|(k, _)| k.clone()),
+
+            Politica::LRU => self.entradas
+                .iter()
+                .min_by_key(|(_, e)| e.ultimo_acceso)
+                .map(|(k, _)| k.clone()),
+
+            Politica::MRU => self.entradas
+                .iter()
+                .max_by_key(|(_, e)| e.ultimo_acceso)
+                .map(|(k, _)| k.clone()),
+
+            Politica::LFU => self.entradas
+                .iter()
+                .min_by_key(|(_, e)| e.frecuencia)
+                .map(|(k, _)| k.clone()),
+
+            Politica::Random => {
+                let keys: Vec<String> = self.entradas.keys().cloned().collect();
+                let idx = Self::ahora() as usize % keys.len();
+                Some(keys[idx].clone())
+            }
+        };
+
+        if let Some(url) = url_a_borrar {
+            if let Some(entrada) = self.entradas.remove(&url) {
+                self.tamanio_actual -= entrada.tamanio_bytes;
+                let _ = fs::remove_file(&entrada.ruta_en_disco);
+                println!("EVICT [{:?}] — borrado: {}", self.politica, url);
+            }
+        }
+    }
+}
+
+type EstadoCache = Arc<Mutex<Cache>>;
+
+// ── Handler HTTP ──────────────────────────────────────────────────────────────
 #[derive(Deserialize)]
 struct Params {
     url: String,
@@ -19,38 +168,182 @@ async fn buscar_en_cache(
     Query(params): Query<Params>,
     axum::extract::State(cache): axum::extract::State<EstadoCache>,
 ) -> impl IntoResponse {
-    let cache = cache.lock().unwrap();
+    let url = params.url.clone();
 
-    match cache.get(&params.url) {
-        Some(entrada) => (
-            StatusCode::OK,
-            format!("HIT — archivo en: {} ({} bytes)", entrada.ruta_en_disco, entrada.tamanio_bytes)
-        ),
-        None => (
-            StatusCode::NOT_FOUND,
-            format!("MISS — {} no está en caché", params.url)
-        ),
+    // HIT
+    {
+        let mut cache = cache.lock().unwrap();
+        if let Some(entrada) = cache.get(&url) {
+            let contenido = fs::read(&entrada.ruta_en_disco).unwrap_or_default();
+            println!("HIT — sirviendo desde disco: {}", entrada.ruta_en_disco);
+            return (StatusCode::OK, String::from_utf8_lossy(&contenido).to_string());
+        }
+    }
+
+    // MISS — ir al origen
+    println!("MISS — buscando en origen: {}", url);
+    match reqwest::get(&url).await {
+        Ok(respuesta) => {
+            let contenido = respuesta.text().await.unwrap_or_default();
+
+            fs::create_dir_all("cache_disco").unwrap();
+
+            let nombre_archivo = url
+                .replace("http://", "")
+                .replace("https://", "")
+                .replace("/", "_")
+                .replace(":", "_");
+
+            let ruta = format!("cache_disco/{}", nombre_archivo);
+            fs::write(&ruta, &contenido).unwrap();
+            let tamanio = contenido.len() as u64;
+
+            println!("Guardado en disco: {} ({} bytes)", ruta, tamanio);
+
+            let mut cache = cache.lock().unwrap();
+            cache.insertar(url, ruta, tamanio);
+
+            (StatusCode::OK, contenido)
+        }
+        Err(e) => {
+            println!("Error: {}", e);
+            (StatusCode::BAD_GATEWAY, format!("Error: {}", e))
+        }
     }
 }
 
+// ── Main ──────────────────────────────────────────────────────────────────────
 #[tokio::main]
 async fn main() {
-    let mut mapa = HashMap::new();
-    mapa.insert(
-        String::from("http://example.com/foto.png"),
-        EntradaCache {
-            ruta_en_disco: String::from("/cache/foto.png"),
-            tamanio_bytes: 2048,
-        },
-    );
+    let domain = std::env::var("DOMAIN")
+        .unwrap_or_else(|_| "localhost".to_string());
 
-    let cache: EstadoCache = Arc::new(Mutex::new(mapa));
+    println!("Cargando configuración para dominio: {}", domain);
+
+    let (tamanio_maximo, politica) = match load_config(&domain).await {
+        Ok(config) => {
+            println!("Config cargada — tamaño: {}MB, política: {}", 
+                config.cache_size_mb, config.replacement_policy);
+            let bytes = (config.cache_size_mb as u64) * 1024 * 1024;
+            let politica = Politica::desde_string(&config.replacement_policy);
+            (bytes, politica)
+        }
+        Err(e) => {
+            println!("No se pudo cargar config ({}), usando valores por defecto", e);
+            (500 * 1024 * 1024, Politica::LRU)
+        }
+    };
+
+    let cache = Cache::nuevo(tamanio_maximo, politica);
+    let estado: EstadoCache = Arc::new(Mutex::new(cache));
 
     let app = Router::new()
         .route("/cache", get(buscar_en_cache))
-        .with_state(cache);
+        .with_state(estado);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Servidor corriendo en http://localhost:3000");
     axum::serve(listener, app).await.unwrap();
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── FIFO ─────────────────────────────────────────────────────────────────
+    #[test]
+    fn fifo_borra_el_primero_en_llegar() {
+        let mut cache = Cache::nuevo(100, Politica::FIFO);
+        cache.insertar_directo(String::from("url_a"), 60);
+        cache.insertar_directo(String::from("url_b"), 60); // fuerza eviction
+
+        // url_a llegó primero, debe haberse borrado
+        assert!(!cache.entradas.contains_key("url_a"), "FIFO debió borrar url_a");
+        assert!(cache.entradas.contains_key("url_b"),  "FIFO debió conservar url_b");
+    }
+
+    #[test]
+    fn fifo_ignora_accesos_recientes() {
+        let mut cache = Cache::nuevo(100, Politica::FIFO);
+        cache.insertar_directo(String::from("url_a"), 60);
+
+        // acceder a url_a — FIFO no debería importarle
+        cache.get("url_a");
+        cache.get("url_a");
+
+        cache.insertar_directo(String::from("url_b"), 60); // fuerza eviction
+
+        // url_a debe borrarse igual aunque se accedió recientemente
+        assert!(!cache.entradas.contains_key("url_a"), "FIFO debe ignorar accesos recientes");
+        assert!(cache.entradas.contains_key("url_b"),  "FIFO debe conservar url_b");
+    }
+
+    // ── LRU ──────────────────────────────────────────────────────────────────
+    #[test]
+    fn lru_borra_el_menos_reciente() {
+        let mut cache = Cache::nuevo(100, Politica::LRU);
+        cache.insertar_directo(String::from("url_a"), 40);
+        cache.insertar_directo(String::from("url_b"), 40);
+
+        // acceder a url_a para que sea la más reciente
+        cache.get("url_a");
+
+        cache.insertar_directo(String::from("url_c"), 40); // fuerza eviction
+
+        // url_b debe borrarse porque url_a se accedió más recientemente
+        assert!(!cache.entradas.contains_key("url_b"), "LRU debió borrar url_b");
+        assert!(cache.entradas.contains_key("url_a"),  "LRU debió conservar url_a");
+    }
+
+    // ── MRU ──────────────────────────────────────────────────────────────────
+    #[test]
+    fn mru_borra_el_mas_reciente() {
+        let mut cache = Cache::nuevo(100, Politica::MRU);
+        cache.insertar_directo(String::from("url_a"), 40);
+        cache.insertar_directo(String::from("url_b"), 40);
+
+        // forzar ultimo_acceso de url_a a un valor mayor manualmente
+        if let Some(entrada) = cache.entradas.get_mut("url_a") {
+            entrada.ultimo_acceso = Cache::ahora() + 1000;
+        }
+
+        cache.insertar_directo(String::from("url_c"), 40); // fuerza eviction
+
+        // url_a debe borrarse porque tiene ultimo_acceso mayor
+        assert!(!cache.entradas.contains_key("url_a"), "MRU debió borrar url_a");
+        assert!(cache.entradas.contains_key("url_b"),  "MRU debió conservar url_b");
+    }
+
+    // ── LFU ──────────────────────────────────────────────────────────────────
+    #[test]
+    fn lfu_borra_el_menos_frecuente() {
+        let mut cache = Cache::nuevo(100, Politica::LFU);
+        cache.insertar_directo(String::from("url_a"), 40);
+        cache.insertar_directo(String::from("url_b"), 40);
+
+        // acceder a url_a varias veces para aumentar su frecuencia
+        cache.get("url_a");
+        cache.get("url_a");
+        cache.get("url_a");
+
+        cache.insertar_directo(String::from("url_c"), 40); // fuerza eviction
+
+        // url_b debe borrarse porque tiene frecuencia 1, url_a tiene 4
+        assert!(!cache.entradas.contains_key("url_b"), "LFU debió borrar url_b");
+        assert!(cache.entradas.contains_key("url_a"),  "LFU debió conservar url_a");
+    }
+
+    // ── Random ───────────────────────────────────────────────────────────────
+    #[test]
+    fn random_borra_alguna_entrada() {
+        let mut cache = Cache::nuevo(100, Politica::Random);
+        cache.insertar_directo(String::from("url_a"), 60);
+        cache.insertar_directo(String::from("url_b"), 60); // fuerza eviction
+
+        // no sabemos cuál borró, pero el tamaño debe ser correcto
+        assert_eq!(cache.entradas.len(), 1, "Random debió conservar exactamente 1 entrada");
+        assert!(cache.tamanio_actual <= 100, "Random no debe exceder el tamaño máximo");
+    }
 }

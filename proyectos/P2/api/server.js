@@ -57,6 +57,8 @@ app.post("/domains", requireAuth, async (req, res) => {
             return res.status(400).json({ message: "domain requerido" });
         }
 
+        const txtRecord = `proyecto2-verify=${Math.random().toString(36).slice(2)}`
+
         const domainData = {
             domain: data.domain,
             ttl: data.ttl ?? 3600,
@@ -65,14 +67,14 @@ app.post("/domains", requireAuth, async (req, res) => {
             auth_type: data.auth_type ?? "none",
             api_key: data.api_key ?? "abc123",
             verified: data.verified ?? false,
+            txtRecord,  // ahora sí se guarda en Firebase
         };
 
         await db.collection("domains").doc(data.domain).set(domainData);
 
         res.status(201).json({
             id: data.domain,
-            name: data.domain,        // la UI usa 'name' para mostrar el dominio
-            txtRecord: `proyecto2-verify=${Math.random().toString(36).slice(2)}`,
+            name: data.domain,
             ...domainData,
         });
     } catch (e) {

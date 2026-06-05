@@ -66,3 +66,45 @@ pub fn build_a_record_response(
 
     Ok(response)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_a_record_response() {
+        // Consulta simulada para "itcr.ac.cr" (Cabecera de 12 bytes + QNAME + QTYPE/QCLASS de 4 bytes)
+        let mut query = vec![0xAB, 0xCD]; // ID = 0xABCD
+        query.extend_from_slice(&[0x00, 0x00]); // Flags consulta estándar
+        query.extend_from_slice(&[0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]); // QDCOUNT=1
+        // QNAME: "itcr.ac.cr" (4 itcr 2 ac 2 cr 0)
+        query.extend_from_slice(&[4, b'i', b't', b'c', b'r', 2, b'a', b'c', 2, b'c', b'r', 0]);
+        query.extend_from_slice(&[0x00, 0x01, 0x00, 0x01]); // QTYPE=A (1), QCLASS=IN (1)
+
+        let ip_target = "192.168.1.50";
+        let ttl = 60; // 60 segundos
+
+        let response = build_a_record_response(&query, ip_target, ttl).unwrap();
+
+        // Verificaciones del encabezado de respuesta
+        assert_eq!(response[0], 0xAB); // Mismo ID
+        assert_eq!(response[1], 0xCD);
+        assert_eq!(response[2], 0x81); // Flags: Respuesta estándar (0x8180)
+        assert_eq!(response[3], 0x80);
+        assert_eq!(response[7], 1);    // ANCOUNT = 1 (Una respuesta incluida)
+
+        // Verificación de los últimos 4 bytes (deben ser la IP mapeada)
+        let len = response.len();
+        assert_eq!(response[len - 4], 192);
+        assert_eq!(response[len - 3], 168);
+        assert_eq!(response[len - 2], 1);
+        assert_eq!(response[len - 1], 50);
+    }
+
+    #[test]
+    fn test_invalid_ip_format() {
+        let query = vec![0u8; 30]; // Buffer genérico lo suficientemente largo
+        let result = build_a_record_response(&query, "IP_INVALIDA_999.999", 300);
+        assert!(result.is_err());
+    }
+}

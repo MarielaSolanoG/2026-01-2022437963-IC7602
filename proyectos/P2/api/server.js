@@ -1,7 +1,10 @@
+require("dotenv").config();
+const bcrypt = require("bcryptjs");
 const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./routes/auth.routes");
 const db = require("./firebase");
+const { requireAuth } = require("./middleware/auth");
 
 const app = express();
 
@@ -13,7 +16,7 @@ app.get("/", (req, res) => {
     res.json({ message: "API running" });
 });
 
-app.get("/domains", async (req, res) => {
+app.get("/domains", requireAuth, async (req, res) => {
     try {
         const snapshot = await db.collection("domains").get();
 
@@ -29,7 +32,7 @@ app.get("/domains", async (req, res) => {
     }
 });
 
-app.get("/domains/:domain/config", async (req, res) => {
+app.get("/domains/:domain/config", requireAuth, async (req, res) => {
     try {
         const domain = req.params.domain;
 
@@ -46,7 +49,7 @@ app.get("/domains/:domain/config", async (req, res) => {
     }
 });
 
-app.post("/domains", async (req, res) => {
+app.post("/domains", requireAuth, async (req, res) => {
     try {
         const data = req.body;
 
@@ -76,7 +79,7 @@ app.post("/domains", async (req, res) => {
     }
 });
 
-app.delete("/domains/:domain", async (req, res) => {
+app.delete("/domains/:domain", requireAuth, async (req, res) => {
     try {
         await db.collection("domains").doc(req.params.domain).delete();
 
@@ -91,7 +94,7 @@ app.delete("/domains/:domain", async (req, res) => {
 GET URLS POR DOMINIO
 */
 
-app.get("/domains/:domain/urls", async (req, res) => {
+app.get("/domains/:domain/urls", requireAuth, async (req, res) => {
     try {
         const { domain } = req.params;
 
@@ -119,7 +122,7 @@ app.get("/domains/:domain/urls", async (req, res) => {
 CREAR URL PARA DOMINIO
 */
 
-app.post("/domains/:domain/urls", async (req, res) => {
+app.post("/domains/:domain/urls", requireAuth, async (req, res) => {
     try {
         const { domain } = req.params;
         const data = req.body;
@@ -160,7 +163,7 @@ app.post("/domains/:domain/urls", async (req, res) => {
 ACTUALIZAR URL
 */
 
-app.put("/domains/:domain/urls/:urlId", async (req, res) => {
+app.put("/domains/:domain/urls/:urlId", requireAuth, async (req, res) => {
     try {
         const { domain, urlId } = req.params;
         const data = req.body;
@@ -188,7 +191,7 @@ app.put("/domains/:domain/urls/:urlId", async (req, res) => {
 ELIMINAR URL
 */
 
-app.delete("/domains/:domain/urls/:urlId", async (req, res) => {
+app.delete("/domains/:domain/urls/:urlId", requireAuth, async (req, res) => {
     try {
         const { domain, urlId } = req.params;
 
@@ -213,7 +216,7 @@ app.delete("/domains/:domain/urls/:urlId", async (req, res) => {
 
 async function findUrlRefById(urlId) {
     const domainsSnapshot = await db.collection("domains").get();
-
+    
     for (const domainDoc of domainsSnapshot.docs) {
         const urlRef = db
             .collection("domains")
@@ -235,7 +238,7 @@ async function findUrlRefById(urlId) {
 GET API KEYS POR URL
 */
 
-app.get("/urls/:urlId/apikeys", async (req, res) => {
+app.get("/urls/:urlId/apikeys", requireAuth, async (req, res) => {
     try {
         const { urlId } = req.params;
 
@@ -269,7 +272,7 @@ app.get("/urls/:urlId/apikeys", async (req, res) => {
 CREAR API KEY PARA URL
 */
 
-app.post("/urls/:urlId/apikeys", async (req, res) => {
+app.post("/urls/:urlId/apikeys", requireAuth, async (req, res) => {
     try {
         const { urlId } = req.params;
 
@@ -306,7 +309,7 @@ app.post("/urls/:urlId/apikeys", async (req, res) => {
 ELIMINAR API KEY
 */
 
-app.delete("/urls/:urlId/apikeys/:keyId", async (req, res) => {
+app.delete("/urls/:urlId/apikeys/:keyId", requireAuth, async (req, res) => {
     try {
         const { urlId, keyId } = req.params;
 
@@ -335,6 +338,129 @@ app.delete("/urls/:urlId/apikeys/:keyId", async (req, res) => {
     }
 });
 
-app.listen(3000, () => {
-    console.log("API http://localhost:3000");
+/*
+GET USUARIOS POR URL
+*/
+app.get("/urls/:urlId/users", requireAuth, async (req, res) => {
+    try {
+        const { urlId } = req.params;
+        const urlRef = await findUrlRefById(urlId);
+
+        if (!urlRef) {
+            return res.status(404).json({ message: "URL no encontrada" });
+        }
+
+        const snapshot = await urlRef.collection("users").get();
+
+        const users = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            username: doc.data().username,
+            // nunca devolvemos el password
+        }));
+
+        res.json(users);
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "Error obteniendo usuarios" });
+    }
 });
+
+/*
+CREAR USUARIO PARA URL
+*/
+app.post("/urls/:urlId/users", requireAuth, async (req, res) => {
+    try {
+        const { urlId } = req.params;
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({ message: "username y password requeridos" });
+        }
+
+        const urlRef = await findUrlRefById(urlId);
+
+        if (!urlRef) {
+            return res.status(404).json({ message: "URL no encontrada" });
+        }
+
+        // Hashea la contraseña antes de guardar
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const userData = {
+            username,
+            password: hashedPassword,
+            createdAt: new Date().toISOString(),
+        };
+
+        const ref = await urlRef.collection("users").add(userData);
+
+        res.status(201).json({
+            id: ref.id,
+            username,
+        });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "Error creando usuario" });
+    }
+});
+
+/*
+ACTUALIZAR USUARIO
+*/
+app.put("/urls/:urlId/users/:userId", requireAuth, async (req, res) => {
+    try {
+        const { urlId, userId } = req.params;
+        const { username, password } = req.body;
+
+        const urlRef = await findUrlRefById(urlId);
+
+        if (!urlRef) {
+            return res.status(404).json({ message: "URL no encontrada" });
+        }
+
+        const updateData = { username };
+
+        // Solo actualiza password si viene en el body
+        if (password) {
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
+        await urlRef.collection("users").doc(userId).update(updateData);
+
+        res.json({ id: userId, username });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "Error actualizando usuario" });
+    }
+});
+
+/*
+ELIMINAR USUARIO
+*/
+app.delete("/urls/:urlId/users/:userId", requireAuth, async (req, res) => {
+    try {
+        const { urlId, userId } = req.params;
+
+        const urlRef = await findUrlRefById(urlId);
+
+        if (!urlRef) {
+            return res.status(404).json({ message: "URL no encontrada" });
+        }
+
+        await urlRef.collection("users").doc(userId).delete();
+
+        res.json({ deleted: true, id: userId });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "Error eliminando usuario" });
+    }
+});
+
+if (process.env.NODE_ENV !== "production") {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`API http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;

@@ -1,1 +1,0 @@
-/home/joshua/2026-01-2022437963-IC7602/proyectos/P2/zonal-cache/cache-core/target/debug/cache-core: /home/joshua/2026-01-2022437963-IC7602/proyectos/P2/zonal-cache/cache-core/src/firebase/config.rs /home/joshua/2026-01-2022437963-IC7602/proyectos/P2/zonal-cache/cache-core/src/firebase/mod.rs /home/joshua/2026-01-2022437963-IC7602/proyectos/P2/zonal-cache/cache-core/src/main.rs

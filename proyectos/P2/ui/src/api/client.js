@@ -18,7 +18,7 @@ httpClient.interceptors.request.use((config) => {
 })
 
 httpClient.interceptors.response.use(
-  (response) => response.data,
+  (response) => toCamelCase(response.data),
   (error) => {
     const message = error.response?.data?.message || 'Error inesperado'
     return Promise.reject({ status: error.response?.status, message })
@@ -54,6 +54,20 @@ const mockClient = async (method, path, body = {}) => {
   } catch (err) {
     return Promise.reject(err)
   }
+}
+
+// Convierte snake_case a camelCase para que la UI siempre reciba el mismo formato
+const toCamelCase = (obj) => {
+  if (Array.isArray(obj)) return obj.map(toCamelCase)
+  if (obj !== null && typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase()),
+        toCamelCase(value)
+      ])
+    )
+  }
+  return obj
 }
 
 // --- API pública ---

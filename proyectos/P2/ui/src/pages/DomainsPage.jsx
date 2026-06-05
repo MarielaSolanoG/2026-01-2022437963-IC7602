@@ -52,7 +52,7 @@ function DomainsPage() {
     setFormLoading(true)
 
     try {
-      const data = await api.post('/domains', { name: newDomain })
+      const data = await api.post('/domains', { domain: newDomain })
 
       // El backend devuelve el dominio creado con un txtRecord para verificar
       // Guardamos ese estado para mostrarle al usuario qué debe hacer
@@ -79,6 +79,26 @@ function DomainsPage() {
       setDomains((prev) => prev.filter((d) => d.id !== id))
     } catch (err) {
       alert('Error al eliminar el dominio')
+    }
+  }
+
+  const handleVerifyDomain = async (domainName) => {
+    try {
+        const data = await api.post(`/domains/${domainName}/verify`)
+        if (data.verified) {
+            setDomains((prev) =>
+                prev.map((d) =>
+                    (d.name || d.domain) === domainName
+                        ? { ...d, verified: true }
+                        : d
+                )
+            )
+            alert('¡Dominio verificado correctamente!')
+        } else {
+            alert(data.message)
+        }
+    } catch (err) {
+        alert('Error al verificar el dominio')
     }
   }
 
@@ -196,14 +216,24 @@ function DomainsPage() {
                   className="bg-white rounded-lg shadow-sm p-4 flex justify-between items-center"
                 >
                   <div>
-                    <p className="font-medium text-gray-800">{domain.name}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      domain.verified
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {domain.verified ? 'Verificado' : 'Pendiente verificación'}
-                    </span>
+                    <p className="font-medium text-gray-800">{domain.name || domain.domain}</p>
+                    <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            domain.verified
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                            {domain.verified ? 'Verificado' : 'Pendiente verificación'}
+                        </span>
+                        {!domain.verified && (
+                            <button
+                                onClick={() => handleVerifyDomain(domain.name || domain.domain)}
+                                className="text-xs text-blue-600 hover:underline"
+                            >
+                                Verificar ahora
+                            </button>
+                        )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Link

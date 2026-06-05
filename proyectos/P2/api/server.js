@@ -71,6 +71,8 @@ app.post("/domains", requireAuth, async (req, res) => {
 
         res.status(201).json({
             id: data.domain,
+            name: data.domain,        // la UI usa 'name' para mostrar el dominio
+            txtRecord: `proyecto2-verify=${Math.random().toString(36).slice(2)}`,
             ...domainData,
         });
     } catch (e) {

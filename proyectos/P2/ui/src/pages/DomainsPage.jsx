@@ -52,7 +52,7 @@ function DomainsPage() {
     setFormLoading(true)
 
     try {
-      const data = await api.post('/domains', { name: newDomain })
+      const data = await api.post('/domains', { domain: newDomain })
 
       // El backend devuelve el dominio creado con un txtRecord para verificar
       // Guardamos ese estado para mostrarle al usuario qué debe hacer
@@ -196,7 +196,7 @@ function DomainsPage() {
                   className="bg-white rounded-lg shadow-sm p-4 flex justify-between items-center"
                 >
                   <div>
-                    <p className="font-medium text-gray-800">{domain.name}</p>
+                    <p className="font-medium text-gray-800">{domain.name || domain.domain}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       domain.verified
                         ? 'bg-green-100 text-green-700'

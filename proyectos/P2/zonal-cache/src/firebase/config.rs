@@ -13,7 +13,7 @@ pub struct DomainConfig {
 
 pub async fn load_config(domain: &str) -> Result<DomainConfig, Box<dyn Error>> {
     let base_url = std::env::var("CONFIG_API_URL")
-        .unwrap_or_else(|_| "http://localhost:3000".to_string());
+        .unwrap_or_else(|_| "https://2026-01-2022437963-ic-7602.vercel.app".to_string());
 
     let url = format!("{}/domains/{}/config", base_url, domain);
 

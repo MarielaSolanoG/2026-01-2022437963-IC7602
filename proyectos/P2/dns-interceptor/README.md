@@ -1,58 +1,74 @@
 # DNS Interceptor
 
-DNS Interceptor es un servidor DNS ligero escrito en Rust que intercepta consultas DNS UDP, consulta una API externa para determinar si un dominio debe resolverse localmente y, en caso contrario, actúa como proxy hacia un resolvedor DNS remoto.
+DNS Interceptor es un servidor DNS ligero escrito en Rust que intercepta consultas DNS UDP y responde dinámicamente con una dirección IP de caché regional basada en la ubicación geográfica del cliente.
 
-El objetivo principal es permitir una resolución DNS inteligente basada en lógica externa (geolocalización, balanceo de carga, health checks, etc.) sin modificar los clientes DNS.
+El sistema utiliza una función RPC en Supabase para determinar el país de origen de la IP cliente y seleccionar automáticamente la caché zonal más apropiada.
+
+Su objetivo es dirigir tráfico DNS hacia infraestructuras regionales de forma transparente para optimizar latencia, distribución geográfica y consumo de recursos.
 
 ---
 
-## Características
+# Características
 
 * Escucha consultas DNS vía UDP.
 * Parseo manual de paquetes DNS.
 * Extracción de dominios desde consultas DNS estándar.
-* Resolución local mediante API HTTP.
+* Geolocalización de clientes mediante Supabase RPC.
+* Selección automática de caché regional.
 * Construcción manual de respuestas DNS tipo A.
-* Fallback automático hacia un resolvedor DNS remoto.
 * Procesamiento concurrente mediante hilos (`thread::spawn`).
 * TTL configurable por registro.
 * Configuración mediante variables de entorno.
+* Sin dependencias de resolvers DNS externos.
 
 ---
 
-## Arquitectura
+# Arquitectura
 
 ```text
-Cliente DNS
-     |
-     v
-+----------------+
-| DNS Interceptor|
-+----------------+
-     |
-     | /api/exists
-     v
-+----------------+
-| DNS API        |
-+----------------+
-     |
-     | Existe + Healthy
-     |
-     +------> Construye respuesta DNS local
-     |
-     | No existe / Error
-     v
-/api/dns_resolver
-     |
-     v
-Resolvedor DNS externo
+                   +-------------------+
+                   |    Cliente DNS    |
+                   +---------+---------+
+                             |
+                             v
+                    Consulta DNS UDP
+                             |
+                             v
+                   +-------------------+
+                   |  DNS Interceptor  |
+                   +---------+---------+
+                             |
+                             v
+                  Obtiene IP del cliente
+                             |
+                             v
+                   +-------------------+
+                   |   Supabase RPC    |
+                   |   buscar_pais()   |
+                   +---------+---------+
+                             |
+                             v
+                      Código de país
+                             |
+                             v
+                 Selección de caché zonal
+                             |
+          +------------------+------------------+
+          |                  |                  |
+          v                  v                  v
+     LATAM Cache       USA Cache       EUROPE Cache
+          |                  |                  |
+          +------------------+------------------+
+                             |
+                             v
+                   Respuesta DNS tipo A
 ```
 
 ---
 
-## Flujo de resolución
+# Flujo de resolución
 
-### 1. Recepción de consulta DNS
+## 1. Recepción de consulta DNS
 
 El interceptor escucha consultas DNS UDP en el puerto configurado.
 
@@ -60,83 +76,162 @@ El interceptor escucha consultas DNS UDP en el puerto configurado.
 UdpSocket::bind("0.0.0.0:53")
 ```
 
+Cada consulta es procesada en un hilo independiente.
+
 ---
 
-### 2. Parseo del paquete
+## 2. Parseo del paquete DNS
 
 Se valida el encabezado DNS y se extraen:
 
 * Transaction ID
 * QR Flag
 * Opcode
-* Dominio consultado
+
+Únicamente se procesan consultas DNS estándar:
+
+```text
+QR = 0
+Opcode = 0
+```
+
+---
+
+## 3. Extracción del dominio
+
+Se reconstruye el dominio solicitado a partir del campo QNAME.
 
 Ejemplo:
+
+```text
+03www07example03com00
+```
+
+↓
 
 ```text
 www.example.com
 ```
 
+Actualmente el dominio se utiliza para fines de logging y trazabilidad.
+
 ---
 
-### 3. Consulta a la DNS API
+## 4. Geolocalización del cliente
 
-El interceptor realiza una petición HTTP:
+El interceptor obtiene la IP de origen del cliente DNS.
+
+Ejemplo:
+
+```rust
+let client_ip = src.ip().to_string();
+```
+
+Posteriormente ejecuta una función RPC en Supabase:
 
 ```http
-GET /api/exists?domain=www.example.com&client_ip=1.2.3.4
+POST /rest/v1/rpc/buscar_pais
+```
+
+Payload:
+
+```json
+{
+  "client_ip": "181.193.10.50"
+}
 ```
 
 Respuesta esperada:
 
 ```json
-{
-  "exists": true,
-  "healthy": true,
-  "type": "A",
-  "ip": "10.0.0.15",
-  "ttl": 300
-}
+[
+  {
+    "country_code": "CR"
+  }
+]
 ```
 
 ---
 
-### 4. Resolución local
+## 5. Selección de caché regional
 
-Si el registro:
+Según el país detectado se selecciona una IP de caché regional.
 
-* Existe
-* Está healthy
-* Tiene IP válida
+### LATAM
 
-entonces se construye una respuesta DNS tipo A directamente.
+Países:
+
+```text
+CR
+NI
+PA
+GT
+HN
+```
+
+Variable utilizada:
+
+```bash
+ZONAL_CACHE_LATAM_IP
+```
+
+---
+
+### Norteamérica
+
+Países:
+
+```text
+US
+CA
+MX
+```
+
+Variable utilizada:
+
+```bash
+ZONAL_CACHE_USA_IP
+```
+
+---
+
+### Europa y otras regiones
+
+Variable utilizada:
+
+```bash
+ZONAL_CACHE_EUROPE_IP
+```
+
+---
+
+## 6. Construcción de respuesta DNS
+
+Una vez seleccionada la IP regional, el interceptor genera manualmente una respuesta DNS tipo A.
 
 Ejemplo:
 
 ```text
-www.example.com -> 10.0.0.15
+www.example.com -> 10.10.1.10
 ```
+
+La respuesta incluye:
+
+* Transaction ID original.
+* Pregunta DNS original.
+* Registro tipo A.
+* TTL configurable.
+* Compresión DNS para el nombre consultado.
 
 ---
 
-### 5. Fallback
+## 7. Envío de respuesta
 
-Si:
+La respuesta DNS generada es enviada directamente al cliente mediante UDP.
 
-* No existe el registro
-* Está unhealthy
-* Ocurre un error
-* El paquete DNS no es una consulta estándar
-
-entonces se utiliza:
-
-```http
-POST /api/dns_resolver
+```rust
+socket.send_to(&dns_response, src)?;
 ```
-
-enviando el paquete DNS original codificado en Base64.
-
-La API devuelve la respuesta DNS completa, la cual es reenviada al cliente sin modificaciones.
 
 ---
 
@@ -166,6 +261,58 @@ Responsabilidades:
 
 ---
 
+## query_handler.rs
+
+Contiene la lógica principal del interceptor.
+
+Responsabilidades:
+
+* Validar consultas DNS.
+* Extraer dominios.
+* Obtener IP de origen.
+* Consultar país del cliente.
+* Seleccionar caché regional.
+* Construir respuestas DNS.
+* Enviar respuestas UDP.
+
+---
+
+## geo_locator.rs
+
+Cliente encargado de consultar Supabase para determinar la ubicación geográfica del cliente.
+
+### RPC soportada
+
+```http
+POST /rest/v1/rpc/buscar_pais
+```
+
+Payload:
+
+```json
+{
+  "client_ip": "181.193.10.50"
+}
+```
+
+Respuesta:
+
+```json
+[
+  {
+    "country_code": "CR"
+  }
+]
+```
+
+También implementa la lógica de asignación:
+
+```text
+País → Caché regional
+```
+
+---
+
 ## dns_parser.rs
 
 Implementa el parseo básico de paquetes DNS.
@@ -190,19 +337,7 @@ Extrae:
 
 ### extract_domain()
 
-Reconstruye el dominio consultado a partir del campo QNAME.
-
-Ejemplo:
-
-```text
-03www07example03com00
-```
-
-↓
-
-```text
-www.example.com
-```
+Reconstruye el dominio consultado desde el campo QNAME.
 
 ---
 
@@ -214,77 +349,18 @@ Genera respuestas DNS tipo A.
 
 Construye una respuesta DNS válida utilizando:
 
-* Transaction ID original
-* Flags estándar DNS
-* Pregunta original
-* Registro A
-* TTL configurable
+* Transaction ID original.
+* Pregunta DNS original.
+* Registro A.
+* TTL configurable.
 
-Ejemplo:
+Actualmente utiliza compresión DNS:
 
 ```text
-www.example.com -> 192.168.1.100
+C0 0C
 ```
 
----
-
-## geo_locator.rs
-
-Cliente HTTP para la DNS API.
-
-### Endpoints soportados
-
-#### Verificación de registros
-
-```http
-GET /api/exists
-```
-
-Parámetros:
-
-| Parámetro | Descripción        |
-| --------- | ------------------ |
-| domain    | Dominio consultado |
-| client_ip | IP del cliente     |
-
----
-
-#### Resolución DNS remota
-
-```http
-POST /api/dns_resolver
-```
-
-Payload:
-
-```json
-{
-  "data": "<dns_packet_base64>"
-}
-```
-
-Respuesta:
-
-```json
-{
-  "data": "<dns_response_base64>"
-}
-```
-
----
-
-## query_handler.rs
-
-Contiene la lógica principal del interceptor.
-
-Responsabilidades:
-
-* Validar consultas DNS.
-* Extraer dominio.
-* Consultar la API.
-* Construir respuestas locales.
-* Aplicar fallback cuando sea necesario.
-* Enviar respuestas UDP al cliente.
+para referenciar el nombre consultado en la sección de respuesta.
 
 ---
 
@@ -308,20 +384,62 @@ export DNS_PORT=5353
 
 ---
 
-## DNS_API_URL
+## SUPABASE_URL
 
-URL base de la DNS API.
-
-Valor por defecto:
-
-```bash
-http://localhost:8080
-```
+URL base de Supabase.
 
 Ejemplo:
 
 ```bash
-export DNS_API_URL=http://dns-api:8080
+export SUPABASE_URL=https://mi-proyecto.supabase.co
+```
+
+---
+
+## SUPABASE_KEY
+
+API Key utilizada para ejecutar la función RPC.
+
+Ejemplo:
+
+```bash
+export SUPABASE_KEY=xxxxxxxxxxxxxxxx
+```
+
+---
+
+## ZONAL_CACHE_LATAM_IP
+
+IP de la caché regional para Latinoamérica.
+
+Ejemplo:
+
+```bash
+export ZONAL_CACHE_LATAM_IP=10.10.1.10
+```
+
+---
+
+## ZONAL_CACHE_USA_IP
+
+IP de la caché regional para Norteamérica.
+
+Ejemplo:
+
+```bash
+export ZONAL_CACHE_USA_IP=10.20.1.10
+```
+
+---
+
+## ZONAL_CACHE_EUROPE_IP
+
+IP de la caché regional para Europa y otras regiones.
+
+Ejemplo:
+
+```bash
+export ZONAL_CACHE_EUROPE_IP=10.30.1.10
 ```
 
 ---
@@ -369,27 +487,17 @@ dig
   ↓
 DNS Interceptor
   ↓
-/api/exists
+Geolocalización del cliente
   ↓
-Registro encontrado
+Selección de caché regional
   ↓
-Respuesta DNS local
+Respuesta DNS tipo A
 ```
 
-o
+Resultado:
 
 ```text
-dig
-  ↓
-DNS Interceptor
-  ↓
-/api/exists
-  ↓
-No encontrado
-  ↓
-/api/dns_resolver
-  ↓
-Resolvedor externo
+app.miempresa.com -> 10.10.1.10
 ```
 
 ---
@@ -403,18 +511,22 @@ Resolvedor externo
 * No soporta TCP DNS.
 * No soporta DNSSEC.
 * No soporta múltiples registros en una misma respuesta.
+* No soporta balanceo entre múltiples IPs regionales.
+* Actualmente todas las respuestas corresponden a una caché regional determinada por la ubicación del cliente.
 
 ---
 
 # Casos de uso
 
-* DNS geográfico.
-* Balanceo de tráfico por región.
-* Failover automático basado en health checks.
-* Edge DNS personalizado.
-* DNS interno corporativo.
-* Service discovery.
-* Resolución híbrida entre registros privados y DNS público.
+* CDN privada.
+* Cachés regionales.
+* Distribución geográfica de contenido.
+* Optimización de latencia.
+* Edge DNS.
+* Infraestructura multi-región.
+* Streaming de contenido.
+* Plataformas SaaS distribuidas globalmente.
+* Service delivery por proximidad geográfica.
 
 ---
 
@@ -424,5 +536,4 @@ Resolvedor externo
 | ---------- | ------------------------------- |
 | serde      | Serialización y deserialización |
 | serde_json | Manejo de JSON                  |
-| reqwest    | Cliente HTTP                    |
-| base64     | Codificación de paquetes DNS    |
+| reqwest    | Cliente HTTP para Supabase      |

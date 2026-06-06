@@ -52,10 +52,10 @@ async fn auth_middleware(request: Request, next: Next) -> Result<Response, Statu
 
     if config.auth_type == "session" {
         if let Some(value) = get_session_cookie(request.headers()) {
-        let ui_base = env::var("UI_BASE_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
-        let redirect = env::var("REDIRECT_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
+            if validate_session_token(&value) {
+                return Ok(next.run(request).await);
+            }
 
-        let login_url = format!("{}/auth?domain={}&redirect={}", ui_base, domain, redirect);
             return Err(StatusCode::UNAUTHORIZED);
         }
 
@@ -71,10 +71,10 @@ async fn auth_middleware(request: Request, next: Next) -> Result<Response, Statu
             }
         }
 
-        let login_url = format!(
-            "https://ic7602-p2-jfkdvrmsd-redes-proyecto-2.vercel.app/login",
-            domain
-        );
+        let ui_base = env::var("UI_BASE_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+        let redirect = env::var("REDIRECT_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
+
+        let login_url = format!("{}/auth?domain={}&redirect={}", ui_base, domain, redirect);
         return Ok(Redirect::to(&login_url).into_response());
     }
 

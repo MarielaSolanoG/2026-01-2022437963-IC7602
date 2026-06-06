@@ -1,6 +1,7 @@
 mod firebase;
 mod auth;
 mod cache;
+mod cache_core;
 
 use cache::cache_handler;
 use firebase::config::load_config;

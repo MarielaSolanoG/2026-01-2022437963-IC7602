@@ -19,7 +19,7 @@ pub fn get_session_cookie(headers: &HeaderMap) -> Option<String> {
 }
 
 pub fn validate_session_token(token: &str) -> bool {
-    token.starts_with("session-") || token == "valid-session-123"
+    !token.trim().is_empty()
 }
 
 #[cfg(test)]

@@ -15,7 +15,8 @@ RUN rm -rf src
 
 COPY src ./src
 
-RUN touch src/main.rs && cargo build --release
+RUN echo "Forzando compilación real 1" && rm -f target/release/deps/dns_interceptor* target/release/dns-interceptor*
+RUN cargo build --release
 
 FROM debian:bookworm-slim
 
@@ -26,6 +27,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+RUN echo "Cargando binario nuevo"
 COPY --from=builder /usr/src/dns-interceptor/target/release/dns-interceptor .
 
 EXPOSE 53/udp

@@ -35,9 +35,8 @@ Semestre: I Semestre 2026
 11. [Ejecución del proyecto](#ejecución-del-proyecto)
 12. [Despliegue con Docker y Helm](#despliegue-con-docker-y-helm)
 13. [Pruebas realizadas](#pruebas-realizadas)
-14. [Problemas encontrados y soluciones](#problemas-encontrados-y-soluciones)
-15. [Recomendaciones](#recomendaciones)
-16. [Conclusiones](#conclusiones)
+14. [Recomendaciones](#recomendaciones)
+15. [Conclusiones](#conclusiones)
 
 ---
 
@@ -2530,28 +2529,6 @@ Conclusión:
 
 ```text
 El Apache Server queda desplegado correctamente mediante Helm.
-```
-
----
-
-## Prueba 18 — DNS Interceptor
-
-Comando sugerido:
-
-```bash
-nslookup <dominio> 127.0.0.1
-```
-
-Resultado esperado:
-
-```text
-El DNS Interceptor debe recibir la consulta, procesar el dominio y responder con la dirección de la Zonal Cache correspondiente.
-```
-
-Conclusión:
-
-```text
-Esta sección debe completarse con evidencia real de Persona 1, incluyendo dominio probado, puerto usado y logs del servicio.
 ```
 
 ---

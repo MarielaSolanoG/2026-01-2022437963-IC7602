@@ -9,7 +9,7 @@
 
 ---
 
-## 1. ¿Qué métricas de rendimiento son importantes en los Load Balancers?
+## 1. ¿Qué métricas de rendimiento son importantes en Load Balancers que deben ser examinadas con Observabilidad?
 
 Según la lectura, existen tres métricas principales que se deben monitorear en un dispositivo de balanceo de carga. La primera es las conexiones por segundo, que mide cuántas conexiones nuevas puede aceptar el dispositivo en un segundo. Esta es considerada la más crítica porque abrir y cerrar conexiones HTTP consume muchos recursos del sistema, y generalmente es lo primero en alcanzar un límite de rendimiento. La segunda métrica es las conexiones concurrentes totales, que indica cuántas sesiones TCP abiertas puede manejar el dispositivo al mismo tiempo, algo limitado principalmente por la memoria disponible. La tercera es el throughput (caudal de datos), que mide la velocidad a la que el dispositivo puede mover tráfico a través de su infraestructura, expresado en bits por segundo.
 

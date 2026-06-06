@@ -1,4 +1,4 @@
-use axum::{routing::get, Router, extract::Query, response::IntoResponse, http::StatusCode};
+use axum::{routing::{get, post}, Router, extract::Query, response::IntoResponse, http::StatusCode};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use serde::Deserialize;
@@ -6,7 +6,6 @@ use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 mod firebase;
 use firebase::config::load_config;
-
 
 // ── Política de reemplazo ─────────────────────────────────────────────────────
 #[derive(Clone, Debug)]
@@ -212,6 +211,48 @@ async fn buscar_en_cache(
     }
 }
 
+
+async fn api_exists(
+    Query(params): Query<Params>,
+    axum::extract::State(cache): axum::extract::State<EstadoCache>,
+) -> impl IntoResponse {
+    let mut cache = cache.lock().unwrap();
+
+    match cache.get(&params.url) {
+        Some(entrada) => {
+            let contenido = fs::read(&entrada.ruta_en_disco).unwrap_or_default();
+            (StatusCode::OK, String::from_utf8_lossy(&contenido).to_string())
+        }
+        None => (StatusCode::NOT_FOUND, format!("No existe en caché: {}", params.url))
+    }
+}
+
+#[derive(Deserialize)]
+struct DnsRequest {
+    data: String,
+}
+
+async fn api_dns_resolver(
+    axum::extract::Json(body): axum::extract::Json<DnsRequest>,
+) -> impl IntoResponse {
+    let dns_interceptor_url = std::env::var("DNS_INTERCEPTOR_URL")
+        .unwrap_or_else(|_| "http://localhost:5000".to_string());
+
+    let client = reqwest::Client::new();
+    match client
+        .post(format!("{}/resolve", dns_interceptor_url))
+        .json(&serde_json::json!({ "data": body.data }))
+        .send()
+        .await
+    {
+        Ok(respuesta) => {
+            let texto = respuesta.text().await.unwrap_or_default();
+            (StatusCode::OK, texto)
+        }
+        Err(e) => (StatusCode::BAD_GATEWAY, format!("Error: {}", e))
+    }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 #[tokio::main]
 async fn main() {
@@ -239,6 +280,8 @@ async fn main() {
 
     let app = Router::new()
         .route("/cache", get(buscar_en_cache))
+        .route("/api/exists", get(api_exists))
+        .route("/api/dns_resolver", post(api_dns_resolver))
         .with_state(estado);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

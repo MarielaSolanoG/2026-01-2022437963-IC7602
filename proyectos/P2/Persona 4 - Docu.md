@@ -14,6 +14,53 @@ Se implementaron dos módulos del sistema:
 
 Ambos módulos se ejecutan en **Vercel** con deployments automáticos desde GitHub.
 
+## Uso de Inteligencia Artificial Generativa
+ 
+La UI fue desarrollada con ayuda de **Claude (Anthropic)** como herramienta de inteligencia artificial generativa, conforme lo requiere la especificación del proyecto.
+ 
+### Herramienta utilizada
+ 
+| Herramienta | Modelo | Propósito |
+|---|---|---|
+| Claude (claude.ai) | Claude Sonnet 4.6 | Asistencia en diseño, arquitectura y generación de código |
+
+### ¿Cómo se usó?
+
+El proceso de desarrollo con IA fue iterativo y educativo. Claude no generó el código completo de una vez — en cambio, se usó como guía paso a paso para:
+
+**1. Diseño de arquitectura**
+
+- Definir la estructura de carpetas del proyecto
+- Decidir qué librerías usar y por qué (React Router, Zustand, Axios)
+- Diseñar el sistema de mocks para desarrollo sin backend
+- Planificar el flujo de autenticación con JWT
+- Cada componente fue generado con explicaciones línea por línea
+- Se explicaron conceptos como `useEffect`, `useParams`, interceptores de Axios, y el patrón de rutas protegidas
+- Se justificaron las decisiones de diseño antes de escribir código
+- Identificación y corrección de errores de compatibilidad entre Zustand 5 y React 19
+- Resolución de errores de normalización de rutas en el sistema de mocks
+- Corrección de desajustes de campos entre UI y API
+- Separación de responsabilidades (api/, pages/, store/, components/)
+- Manejo de variables de entorno con `import.meta.env`
+- Patrón de loading/error states en componentes asincrónicos
+
+### Ejemplos de prompts utilizados
+ 
+```
+"Explícame qué es useEffect antes de usarlo en el componente"
+
+"El mock de PUT /domains/:id/urls/:id no encuentra el handler,
+ ¿cómo normalizo rutas con múltiples parámetros?"
+ 
+"La UI envía 'name' pero la API espera 'domain', 
+ ¿cómo alinео los campos sin romper lo que funciona?"
+```
+
+
+### Aprendizajes del proceso
+ 
+El uso de IA generativa aceleró significativamente el desarrollo, pero requirió comprensión activa de cada decisión. Cuando Claude sugería una solución, se analizaba el porqué antes de implementarla. Esto permitió detectar y corregir errores como los desajustes de nomenclatura entre módulos.
+ 
 ---
 
 

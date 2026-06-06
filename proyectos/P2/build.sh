@@ -4,3 +4,8 @@ docker login
 cd dns-interceptor
 docker build -t $1/dns-interceptor:latest .
 docker push $1/dns-interceptor:latest
+
+cd ../ui
+docker build -t $1/ui:latest .
+docker push $1/ui:latest
+

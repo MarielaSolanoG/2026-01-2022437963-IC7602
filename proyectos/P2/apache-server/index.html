@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache Server</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="circuit-background">
+        <span class="node node-1"></span>
+        <span class="node node-2"></span>
+        <span class="node node-3"></span>
+        <span class="node node-4"></span>
+        <span class="node node-5"></span>
+
+        <span class="line line-1"></span>
+        <span class="line line-2"></span>
+        <span class="line line-3"></span>
+        <span class="line line-4"></span>
+        <span class="line line-5"></span>
+    </div>
+
+    <main class="container">
+        <section class="hero">
+            <div class="badge">Apache Server </div>
+            <h1>Proyecto 2 de Redes</h1>
+
+            <p class="subtitle">
+                Sitio web estático usado como origen para probar el funcionamiento
+                de la Zonal Cache.
+            </p>
+
+            <div class="network-animation">
+                <div class="server">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+
+                <div class="packet packet-1"></div>
+                <div class="packet packet-2"></div>
+                <div class="packet packet-3"></div>
+
+                <div class="cache">
+                    <div class="cache-ring"></div>
+                    <p>Cache</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="cards">
+            <article class="card">
+                <h2>HTML</h2>
+                <p>
+                    Esta página permite probar respuestas de tipo HTML servidas
+                    desde Apache.
+                </p>
+            </article>
+
+            <article class="card">
+                <h2>CSS</h2>
+                <p>
+                    El archivo de estilos también puede ser solicitado y almacenado
+                    por la caché.
+                </p>
+            </article>
+
+            <article class="card">
+                <h2>Zonal Cache</h2>
+                <p>
+                    Si el recurso no está en caché, se consulta este servidor origen
+                    y luego se guarda la respuesta.
+                </p>
+            </article>
+        </section>
+
+        <section class="flow">
+            <div>Cliente</div>
+            <span></span>
+            <div>Zonal Cache</div>
+            <span></span>
+            <div>Apache Server</div>
+        </section>
+
+        <footer>
+            Redes 2026 - Tecnologico de Costa Rica
+        </footer>
+    </main>
+</body>
+</html>

@@ -32,8 +32,8 @@ app.get("/domains", requireAuth, async (req, res) => {
     }
 });
 
-app.get("/domains/:domain/config", requireAuth, async (req, res) => {
-    try {
+app.get("/domains/:domain/config", async (req, res) => {
+        try {
         const domain = req.params.domain;
 
         const doc = await db.collection("domains").doc(domain).get();

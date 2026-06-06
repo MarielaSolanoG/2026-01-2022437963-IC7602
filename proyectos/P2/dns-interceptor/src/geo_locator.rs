@@ -20,7 +20,7 @@ impl GeoLocator {
         }
     }
 
-    /// Consulta en Supabase a qué país pertenece la IP de origen
+    /// Consulta en Supabase a qué país pertenece la IP de origen usando RPC
     pub fn obtener_pais_por_ip(&self, client_ip: &str) -> String {
         if self.supabase_url.is_empty() || self.supabase_key.is_empty() {
             eprintln!("[GEO_ERROR] SUPABASE_URL o SUPABASE_KEY no configuradas en el entorno.");
@@ -29,23 +29,22 @@ impl GeoLocator {
 
         let client = reqwest::blocking::Client::new();
         let base_url = self.supabase_url.trim_end_matches('/');
+        
+        // La ruta para ejecutar funciones almacenadas en Supabase (RPC)
+        let url = format!("{}/rest/v1/rpc/buscar_pais", base_url);
 
-        // 1. Extraemos los dos primeros octetos de la IP (ej: de "200.200.5.1" a "200.200.%")
-        let ip_parts: Vec<&str> = client_ip.split('.').collect();
-        let ip_prefix = if ip_parts.len() >= 2 {
-            format!("{}.{}.%", ip_parts[0], ip_parts[1])
-        } else {
-            format!("{}%", client_ip)
-        };
+        // Construimos el JSON con el parámetro exacto que espera la función SQL
+        let json_body = serde_json::json!({
+            "client_ip": client_ip
+        });
 
-        // 2. Usamos el operador 'like' para que calce con el inicio del texto en la columna 'cidr'
-        let url = format!("{}/rest/v1/ip_to_country?cidr=like.{}", base_url, ip_prefix);
-
-        let response = client.get(&url)
+        // Usamos POST para invocar el RPC enviando el cuerpo estructurado
+        let response = client.post(&url)
             .header("apikey", &self.supabase_key)
             .header("Authorization", format!("Bearer {}", self.supabase_key))
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
+            .json(&json_body)
             .send();
 
         match response {
@@ -53,23 +52,24 @@ impl GeoLocator {
                 if !res.status().is_success() {
                     let status_code = res.status();
                     if let Ok(err_body) = res.text() {
-                        eprintln!("[GEO_ERROR] Supabase respondió con código {}: {}", status_code, err_body);
+                        eprintln!("[GEO_ERROR] Supabase RPC respondió con código {}: {}", status_code, err_body);
                     } else {
-                        eprintln!("[GEO_ERROR] Supabase respondió con código de error: {}", status_code);
+                        eprintln!("[GEO_ERROR] Supabase RPC respondió con código de error: {}", status_code);
                     }
                     return "UNKNOWN".to_string();
                 }
 
+                // Las funciones RPC que devuelven tablas retornan un arreglo JSON estándar
                 match res.json::<Vec<SupabaseGeoResponse>>() {
                     Ok(records) => {
                         if let Some(record) = records.first() {
                             return record.country_code.trim().to_uppercase();
                         }
-                        println!("[GEO_WARNING] No se encontró ningún registro para la IP: {}", client_ip);
+                        println!("[GEO_WARNING] RPC no devolvió filas para la IP: {}", client_ip);
                         "UNKNOWN".to_string()
                     }
                     Err(e) => {
-                        eprintln!("[GEO_ERROR] Error al deserializar JSON de Supabase: {}", e);
+                        eprintln!("[GEO_ERROR] Error al deserializar JSON de la RPC: {}", e);
                         "UNKNOWN".to_string()
                     }
                 }

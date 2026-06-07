@@ -211,11 +211,13 @@ P2/
 
 ## Descripción
 
-El DNS Interceptor es un servidor DNS ligero implementado en Rust. Su función principal es recibir consultas DNS por UDP, analizar el paquete recibido, extraer el dominio consultado y decidir si la consulta puede resolverse mediante la lógica interna del sistema o si debe enviarse a un flujo de fallback.
+El DNS Interceptor es un servidor DNS ligero implementado en Rust. Su función principal es recibir consultas DNS por UDP, analizar el paquete recibido, extraer el dominio consultado y responder dinámicamente con una dirección IP de caché regional basada en la ubicación geográfica del cliente.
 
-Dentro del Proyecto 2, este componente funciona como punto de entrada para los usuarios. Cuando un cliente intenta acceder a un dominio configurado, el DNS Interceptor procesa la consulta y permite redirigir el tráfico hacia una Zonal Cache. Para esto, obtiene el dominio consultado y la IP de origen del cliente, y consulta el servicio configurado mediante `DNS_API_URL`.
+Dentro del Proyecto 2, este componente funciona como punto de entrada para los usuarios. Cuando un cliente intenta acceder a un dominio, el DNS Interceptor procesa la consulta DNS, obtiene la IP de origen del cliente y utiliza una función RPC en Supabase para determinar el país desde donde proviene la solicitud.
 
-Este componente fue adaptado del trabajo realizado en el proyecto anterior, pero en esta versión se implementa en Rust y se prepara para ejecutarse en Kubernetes mediante Helm Charts.
+Con esa información, el sistema selecciona automáticamente una caché zonal según la región del usuario. De esta manera, el cliente recibe una respuesta DNS tipo A con la IP de la caché regional correspondiente, sin tener que conocer internamente cómo se hizo la selección.
+
+Este componente fue implementado en Rust y se prepara para ejecutarse en Kubernetes mediante Helm Charts.
 
 ---
 
@@ -229,10 +231,10 @@ El DNS Interceptor se encarga de:
 - Extraer el dominio consultado desde el QNAME.
 - Validar si el paquete corresponde a una consulta DNS estándar.
 - Obtener la IP del cliente que hizo la consulta.
-- Consultar una API externa para saber cómo resolver el dominio.
-- Recibir una IP final para responder al cliente.
-- Construir respuestas DNS tipo A cuando existe una IP válida.
-- Aplicar fallback cuando el dominio no existe, está unhealthy o el paquete no es estándar.
+- Consultar Supabase mediante una función RPC.
+- Determinar el país de origen de la IP cliente.
+- Seleccionar automáticamente una caché regional.
+- Construir respuestas DNS tipo A con la IP de la caché seleccionada.
 - Enviar la respuesta DNS final al cliente.
 - Ejecutarse dentro de contenedores Docker.
 - Desplegarse en Kubernetes mediante Helm Charts.
@@ -244,70 +246,66 @@ El DNS Interceptor se encarga de:
 El flujo general del DNS Interceptor es el siguiente:
 
 ```text
-Cliente DNS
-   |
-   | Consulta DNS por UDP
-   v
-DNS Interceptor
-   |
-   | Parseo de paquete DNS
-   | Extracción de dominio
-   | Obtención de IP del cliente
-   v
-API externa / Zonal Cache
-   |
-   | Existe + healthy + IP
-   v
-Construcción de respuesta DNS local
-   |
-   v
-Cliente DNS
-```
-
-Si el dominio no existe, está marcado como no saludable o no se puede construir la respuesta local, el Interceptor aplica fallback:
-
-```text
-Cliente DNS
-   |
-   | Consulta DNS por UDP
-   v
-DNS Interceptor
-   |
-   | Paquete DNS original en Base64
-   v
-/api/dns_resolver
-   |
-   | Respuesta DNS en Base64
-   v
-DNS Interceptor
-   |
-   | Respuesta DNS al cliente
-   v
-Cliente DNS
+                   +-------------------+
+                   |    Cliente DNS    |
+                   +---------+---------+
+                             |
+                             v
+                    Consulta DNS UDP
+                             |
+                             v
+                   +-------------------+
+                   |  DNS Interceptor  |
+                   +---------+---------+
+                             |
+                             v
+                  Obtiene IP del cliente
+                             |
+                             v
+                   +-------------------+
+                   |   Supabase RPC    |
+                   |   buscar_pais()   |
+                   +---------+---------+
+                             |
+                             v
+                      Código de país
+                             |
+                             v
+                 Selección de caché zonal
+                             |
+          +------------------+------------------+
+          |                  |                  |
+          v                  v                  v
+     LATAM Cache        USA Cache        EUROPE Cache
+          |                  |                  |
+          +------------------+------------------+
+                             |
+                             v
+                   Respuesta DNS tipo A
 ```
 
 ---
 
 ## Relación con la Zonal Cache
 
-El DNS Interceptor no almacena contenido HTTP en caché. Su trabajo es dirigir al usuario hacia el servicio correcto.
+El DNS Interceptor no almacena contenido HTTP en caché. Su trabajo es responder la consulta DNS con la IP de la caché regional que corresponde según la ubicación del cliente.
 
 La Zonal Cache es la que se encarga de:
 
-- Recibir la solicitud HTTP.
-- Consultar configuración desde Firebase.
-- Validar autenticación.
-- Revisar si el recurso está en caché.
-- Consultar el servidor origen si hay MISS.
-- Guardar recursos en disco.
-- Servir recursos cacheados.
+- recibir la solicitud HTTP;
+- consultar configuración desde Firebase;
+- validar autenticación;
+- revisar si el recurso está en caché;
+- consultar el servidor origen si hay MISS;
+- guardar recursos en disco;
+- servir recursos cacheados.
 
 La relación entre ambos componentes es:
 
 ```text
 DNS Interceptor
    |
-   | Devuelve IP / servicio de caché
+   | Responde con IP de caché regional
    v
 Zonal Cache
    |
@@ -316,13 +314,7 @@ Zonal Cache
 Servidor origen
 ```
 
-Dentro de Kubernetes, la integración se realiza mediante Services. El DNS Interceptor usa la variable `DNS_API_URL` para saber a qué servicio consultar.
-
-Ejemplo:
-
-```text
-DNS_API_URL=http://zonal-cache-service:8080
-```
+En Kubernetes, el DNS Interceptor puede responder con la IP asociada a una caché zonal o servicio configurado para una región específica.
 
 ---
 
@@ -345,9 +337,9 @@ dns-interceptor/
 |---|---|
 | `main.rs` | Punto de entrada del programa. Abre el socket UDP, escucha consultas y crea un hilo por solicitud. |
 | `dns_parser.rs` | Se encarga de parsear el encabezado DNS y extraer el dominio consultado. |
-| `dns_response.rs` | Construye respuestas DNS tipo A usando la IP y TTL recibidos. |
-| `geo_locator.rs` | Cliente HTTP que consulta `/api/exists` y `/api/dns_resolver`. |
-| `query_handler.rs` | Contiene la lógica principal para decidir entre respuesta local o fallback. |
+| `dns_response.rs` | Construye respuestas DNS tipo A usando la IP regional seleccionada y el TTL configurado. |
+| `geo_locator.rs` | Cliente encargado de consultar Supabase RPC para determinar el país del cliente. |
+| `query_handler.rs` | Contiene la lógica principal para validar la consulta, obtener la IP del cliente, consultar el país y seleccionar la caché regional. |
 
 ---
 
@@ -362,6 +354,8 @@ Por defecto usa el puerto `53`, que es el puerto estándar de DNS.
 ```rust
 UdpSocket::bind("0.0.0.0:53")
 ```
+
+Cada consulta es procesada en un hilo independiente mediante `thread::spawn`, lo cual permite atender varias solicitudes sin bloquear todo el servidor.
 
 El puerto puede configurarse con la variable de entorno:
 
@@ -403,9 +397,7 @@ QR = 0
 OPCODE = 0
 ```
 
-Esto significa que el paquete recibido es una consulta DNS normal.
-
-Si el paquete no es estándar, el Interceptor no intenta resolverlo localmente y aplica fallback usando `/api/dns_resolver`.
+Esto significa que el paquete recibido es una consulta DNS normal. Actualmente el Interceptor se enfoca en este tipo de consultas para construir respuestas DNS tipo A.
 
 ---
 
@@ -431,6 +423,8 @@ El Interceptor reconstruye esos labels y obtiene el dominio final:
 www.example.com
 ```
 
+Actualmente el dominio se utiliza principalmente para logging, trazabilidad y para mantener claridad sobre qué recurso está consultando el cliente.
+
 ---
 
 ### 5. Obtención de la IP del cliente
@@ -445,46 +439,84 @@ Ejemplo conceptual:
 let client_ip = src.ip().to_string();
 ```
 
-Esa IP se manda luego al servicio configurado en `DNS_API_URL`.
+Esa IP es la que se utiliza para consultar Supabase y determinar el país de origen del cliente.
+
+---
+
+## Geolocalización del cliente
+
+Para determinar la ubicación del cliente, el DNS Interceptor ejecuta una función RPC en Supabase llamada `buscar_pais`.
+
+Endpoint usado:
+
+```http
+POST /rest/v1/rpc/buscar_pais
+```
+
+Payload enviado:
+
+```json
+{
+  "client_ip": "181.193.10.50"
+}
+```
+
+Respuesta esperada:
+
+```json
+[
+  {
+    "country_code": "CR"
+  }
+]
+```
+
+El campo más importante es `country_code`, porque con ese valor el Interceptor decide qué caché regional debe responder.
 
 ---
 
 ## Algoritmo de selección de Zonal Cache
 
-En la implementación actual, el DNS Interceptor no tiene quemada una tabla local de países ni decide directamente la caché final dentro del código. Lo que hace es delegar esa decisión al servicio externo configurado en `DNS_API_URL`.
+En la implementación actual, el DNS Interceptor sí participa directamente en la selección de la caché regional.
 
-El algoritmo usado por el Interceptor es:
+El algoritmo usado es el siguiente:
 
 ```text
-1. Recibir paquete DNS por UDP.
+1. Recibir una consulta DNS por UDP.
 
 2. Parsear el header DNS.
 
-3. Verificar si el paquete es una consulta estándar:
+3. Verificar que sea una consulta estándar:
       QR = 0
-      OPCODE = 0
+      Opcode = 0
 
 4. Extraer el dominio consultado desde QNAME.
 
 5. Obtener la IP del cliente desde la dirección origen del paquete UDP.
 
-6. Consultar:
-      GET /api/exists?domain=<dominio>&client_ip=<ip_cliente>
+6. Consultar Supabase RPC:
+      POST /rest/v1/rpc/buscar_pais
 
-7. Esperar una respuesta con:
-      exists
-      healthy
-      ip
-      ttl
-      type
+7. Enviar la IP del cliente:
+      {
+        "client_ip": "181.193.10.50"
+      }
 
-8. Si exists = true, healthy = true y la IP no está vacía:
-      construir una respuesta DNS tipo A con esa IP y TTL.
+8. Recibir el código de país:
+      [
+        {
+          "country_code": "CR"
+        }
+      ]
 
-9. Si no existe, no está healthy, no hay IP o hay error:
-      aplicar fallback con /api/dns_resolver.
+9. Seleccionar la caché regional según el país:
+      CR, NI, PA, GT, HN -> ZONAL_CACHE_LATAM_IP
+      US, CA, MX         -> ZONAL_CACHE_USA_IP
+      Otros países       -> ZONAL_CACHE_EUROPE_IP
 
-10. Enviar la respuesta DNS final al cliente.
+10. Construir una respuesta DNS tipo A con la IP seleccionada.
+
+11. Enviar la respuesta DNS al cliente.
 ```
 
 En forma de flujo:
@@ -494,191 +526,178 @@ Cliente DNS
    ↓
 DNS Interceptor
    ↓
-Extrae dominio
+Extrae dominio consultado
    ↓
-Obtiene client_ip
+Obtiene IP del cliente
    ↓
-GET /api/exists?domain=...&client_ip=...
+Supabase RPC buscar_pais(client_ip)
    ↓
-Servicio externo decide IP final
+Obtiene código de país
    ↓
-DNS Interceptor responde con esa IP
+Selecciona caché regional
+   ↓
+Construye respuesta DNS tipo A
+   ↓
+Cliente recibe IP de la Zonal Cache
 ```
 
-Para el Proyecto 2, la selección esperada de la caché zonal se basa en la procedencia del usuario. Por eso se envía `client_ip`.
-
-La lógica conceptual sería:
+Ejemplo para un cliente de Costa Rica:
 
 ```text
-client_ip
+client_ip = 181.193.10.50
    ↓
-IP to Country
+Supabase RPC devuelve CR
    ↓
-País o región del usuario
+CR pertenece a LATAM
    ↓
-Selección de Zonal Cache más cercana o configurada
+Se selecciona ZONAL_CACHE_LATAM_IP
    ↓
-IP final devuelta al DNS Interceptor
+Respuesta DNS:
+app.miempresa.com -> 10.10.1.10
 ```
 
-Ejemplo:
+Ejemplo para un cliente de Estados Unidos:
 
 ```text
-Cliente de Costa Rica
+client_ip = IP de Estados Unidos
    ↓
-Consulta app.ejemplo.com
+Supabase RPC devuelve US
    ↓
-DNS Interceptor obtiene client_ip
+US pertenece a Norteamérica
    ↓
-Servicio externo determina país = CR
-   ↓
-Se selecciona Zonal Cache CR
-   ↓
-DNS Interceptor responde:
-app.ejemplo.com -> IP_ZONAL_CACHE_CR
+Se selecciona ZONAL_CACHE_USA_IP
 ```
 
-Si no existe una caché específica para el país, se puede usar una caché por defecto.
+Ejemplo para otros países:
 
 ```text
-Si existe caché para el país:
-    devolver IP de caché regional
-Si no existe caché para el país:
-    devolver IP de caché default
+País no reconocido en LATAM o Norteamérica
+   ↓
+Se selecciona ZONAL_CACHE_EUROPE_IP
 ```
-
-En resumen, el Interceptor actúa como punto de entrada DNS. La decisión final de qué IP devolver se delega al servicio externo, usando como datos principales el dominio consultado y la IP del cliente.
 
 ---
 
-## Consulta a la API externa
+## Regiones configuradas
 
-El Interceptor realiza una petición HTTP al endpoint:
+### LATAM
 
-```http
-GET /api/exists
+Países configurados para la región LATAM:
+
+```text
+CR
+NI
+PA
+GT
+HN
 ```
 
-Ejemplo:
+Variable utilizada:
 
-```http
-GET /api/exists?domain=www.example.com&client_ip=1.2.3.4
+```bash
+ZONAL_CACHE_LATAM_IP
 ```
 
-Respuesta esperada:
+---
 
-```json
-{
-  "exists": true,
-  "healthy": true,
-  "type": "A",
-  "ip": "10.0.0.15",
-  "ttl": 300
-}
+### Norteamérica
+
+Países configurados para Norteamérica:
+
+```text
+US
+CA
+MX
 ```
 
-Campos importantes:
+Variable utilizada:
 
-| Campo | Descripción |
-|---|---|
-| `exists` | Indica si el dominio existe en la configuración. |
-| `healthy` | Indica si el recurso o caché está disponible. |
-| `type` | Tipo de registro o lógica aplicada. |
-| `ip` | IP final que el Interceptor debe responder. |
-| `ttl` | Tiempo de vida de la respuesta DNS. |
+```bash
+ZONAL_CACHE_USA_IP
+```
 
-Si la respuesta indica que el dominio existe, está healthy y trae una IP válida, el Interceptor construye una respuesta DNS local.
+---
+
+### Europa y otras regiones
+
+Si el país no pertenece a LATAM ni Norteamérica, se utiliza la caché configurada para Europa u otras regiones.
+
+Variable utilizada:
+
+```bash
+ZONAL_CACHE_EUROPE_IP
+```
 
 ---
 
 ## Construcción de respuesta DNS tipo A
 
-Cuando la API devuelve una IP válida, el Interceptor construye una respuesta DNS tipo A.
+Cuando ya se seleccionó la IP de la caché regional, el Interceptor construye manualmente una respuesta DNS tipo A.
 
 La respuesta incluye:
 
 - Transaction ID original.
-- Flags DNS de respuesta.
-- Pregunta original.
-- Registro A.
-- TTL configurado.
-- Dirección IPv4 recibida.
+- Pregunta DNS original.
+- Registro tipo A.
+- TTL configurable.
+- Dirección IPv4 de la caché regional.
+- Compresión DNS para referenciar el nombre consultado.
 
 Ejemplo:
 
 ```text
-www.example.com -> 10.0.0.15
+www.example.com -> 10.10.1.10
 ```
 
-Esto permite que el cliente DNS reciba una respuesta válida sin conocer la lógica interna del sistema.
+La respuesta utiliza compresión DNS con:
+
+```text
+C0 0C
+```
+
+Esto permite referenciar el nombre consultado en la sección de respuesta sin repetirlo completo.
 
 ---
 
-## Fallback
+## Envío de respuesta al cliente
 
-El fallback se usa cuando:
+Una vez construida la respuesta DNS, el Interceptor la envía directamente al cliente mediante UDP.
 
-- el dominio no existe;
-- el dominio existe pero no está healthy;
-- no se recibe una IP válida;
-- ocurre un error al consultar la API;
-- el paquete DNS no es una consulta estándar;
-- no se puede construir la respuesta DNS local.
+Ejemplo conceptual:
 
-En estos casos, el Interceptor envía el paquete DNS original a:
-
-```http
-POST /api/dns_resolver
+```rust
+socket.send_to(&dns_response, src)?;
 ```
 
-El paquete se codifica en Base64 para poder enviarlo por HTTP.
-
-Payload:
-
-```json
-{
-  "data": "<dns_packet_base64>"
-}
-```
-
-Respuesta esperada:
-
-```json
-{
-  "data": "<dns_response_base64>"
-}
-```
-
-Luego el Interceptor decodifica la respuesta y la reenvía al cliente DNS.
-
-Este flujo es útil porque permite resolver dominios externos o casos que no se pueden responder de forma local.
+Con esto, el cliente recibe una respuesta DNS normal tipo A, pero la IP devuelta corresponde a la caché regional seleccionada por el sistema.
 
 ---
 
 ## Variables de entorno usadas
 
-El DNS Interceptor utiliza variables de entorno para evitar valores quemados en el código.
+El DNS Interceptor utiliza variables de entorno para evitar valores quemados en el código y permitir que la configuración cambie según el ambiente.
 
-| Variable | Descripción | Valor esperado |
+| Variable | Descripción | Ejemplo |
 |---|---|---|
 | `DNS_PORT` | Puerto UDP donde escucha el Interceptor. | `53` o `5353` |
-| `DNS_API_URL` | URL base del servicio usado para resolver dominios o aplicar fallback. | `http://zonal-cache-service:8080` |
+| `SUPABASE_URL` | URL base del proyecto en Supabase. | `https://mi-proyecto.supabase.co` |
+| `SUPABASE_KEY` | API Key usada para consultar la función RPC. | `xxxxxxxxxxxxxxxx` |
+| `ZONAL_CACHE_LATAM_IP` | IP de la caché regional para Latinoamérica. | `10.10.1.10` |
+| `ZONAL_CACHE_USA_IP` | IP de la caché regional para Norteamérica. | `10.20.1.10` |
+| `ZONAL_CACHE_EUROPE_IP` | IP de la caché regional para Europa u otras regiones. | `10.30.1.10` |
 
 Ejemplo de configuración local:
 
 ```bash
 export DNS_PORT=5353
-export DNS_API_URL=http://localhost:8080
+export SUPABASE_URL=https://mi-proyecto.supabase.co
+export SUPABASE_KEY=xxxxxxxxxxxxxxxx
+export ZONAL_CACHE_LATAM_IP=10.10.1.10
+export ZONAL_CACHE_USA_IP=10.20.1.10
+export ZONAL_CACHE_EUROPE_IP=10.30.1.10
 ```
 
-Ejemplo dentro de Kubernetes:
-
-```bash
-DNS_PORT=53
-DNS_API_URL=http://zonal-cache-service:8080
-```
-
-La variable `DNS_API_URL` permite que el DNS Interceptor no dependa de una dirección fija en el código. Así, en ambiente local puede apuntar a `localhost`, mientras que en Kubernetes puede apuntar al nombre del Service interno.
+En Kubernetes, estas variables se inyectan desde el Helm Chart del DNS Interceptor.
 
 ---
 
@@ -711,23 +730,37 @@ service:
   nodePort: 30053
 ```
 
-Las variables de entorno se inyectan desde Helm:
+Las variables de entorno deben incluir la configuración de Supabase y las IPs regionales:
 
 ```yaml
 env:
   dnsPort: "53"
-  dnsApiUrl: "http://zonal-cache-service:8080"
+  supabaseUrl: "https://mi-proyecto.supabase.co"
+  supabaseKey: "xxxxxxxxxxxxxxxx"
+  zonalCacheLatamIp: "10.10.1.10"
+  zonalCacheUsaIp: "10.20.1.10"
+  zonalCacheEuropeIp: "10.30.1.10"
 ```
 
-El Deployment usa esas variables:
+En el Deployment se inyectan como variables de entorno:
 
 ```yaml
 env:
   - name: DNS_PORT
     value: "53"
-  - name: DNS_API_URL
-    value: "http://zonal-cache-service:8080"
+  - name: SUPABASE_URL
+    value: "https://mi-proyecto.supabase.co"
+  - name: SUPABASE_KEY
+    value: "xxxxxxxxxxxxxxxx"
+  - name: ZONAL_CACHE_LATAM_IP
+    value: "10.10.1.10"
+  - name: ZONAL_CACHE_USA_IP
+    value: "10.20.1.10"
+  - name: ZONAL_CACHE_EUROPE_IP
+    value: "10.30.1.10"
 ```
+
+Por seguridad, la API Key de Supabase no debería quedar expuesta en repositorios públicos. Lo recomendable es manejarla mediante variables de entorno o Kubernetes Secrets.
 
 ---
 
@@ -800,45 +833,28 @@ nslookup -port=<puerto> <dominio> 127.0.0.1
 Como en el Helm Chart se puede usar `NodePort 30053`, la prueba esperada desde la máquina local sería:
 
 ```bash
-nslookup -port=30053 ejemplo.com 127.0.0.1
+nslookup -port=30053 app.miempresa.com 127.0.0.1
 ```
 
 También se puede probar con `dig`:
 
 ```bash
-dig @127.0.0.1 -p 30053 ejemplo.com
+dig @127.0.0.1 -p 30053 app.miempresa.com
 ```
 
 ---
 
 ## Dominios de prueba
 
-Para probar el DNS Interceptor se pueden usar dominios configurados en el sistema. Estos dominios deben existir en la configuración que consulta el Interceptor.
-
-Ejemplos sugeridos:
+Para probar el DNS Interceptor se pueden usar dominios de prueba como:
 
 ```text
-localhost
-example.com
-app.local
+app.miempresa.com
 cache-test.com
+example.com
 ```
 
-También se pueden usar dominios externos para validar el fallback:
-
-```text
-google.com
-example.org
-httpbin.org
-```
-
-La idea es probar dos escenarios:
-
-1. Dominio configurado:
-   - El Interceptor debe responder con una IP asociada a la Zonal Cache.
-
-2. Dominio no configurado:
-   - El Interceptor debe aplicar fallback hacia `/api/dns_resolver`.
+El dominio consultado se usa principalmente para trazabilidad y logging. La IP final depende de la geolocalización del cliente y de las variables de entorno configuradas para cada región.
 
 ---
 
@@ -848,39 +864,42 @@ Durante la ejecución del DNS Interceptor se esperan logs similares a los siguie
 
 ```text
 [DNS Interceptor] Escuchando en UDP/0.0.0.0:53
-[DNS_HANDLER] Consultando DNS API por dominio=ejemplo.com client_ip=127.0.0.1
-[DNS_HANDLER] Registro local encontrado. type=A ip=10.0.0.15 ttl=300
+[DNS_HANDLER] Consulta recibida desde 181.193.10.50
+[DNS_HANDLER] Dominio consultado: app.miempresa.com
+[DNS_HANDLER] Consultando Supabase RPC buscar_pais
+[DNS_HANDLER] País detectado: CR
+[DNS_HANDLER] Región seleccionada: LATAM
+[DNS_HANDLER] IP de caché seleccionada: 10.10.1.10
+[DNS_RESPONSE] Respuesta DNS tipo A construida correctamente
+[DNS_HANDLER] Respuesta enviada al cliente
 ```
 
-Para un caso de fallback:
+Para un cliente de Norteamérica:
 
 ```text
-[DNS_HANDLER] Consultando DNS API por dominio=google.com client_ip=127.0.0.1
-[DNS_HANDLER_WARNING] No existe, está unhealthy o no hay IP. Fallback a /api/dns_resolver
+[DNS_HANDLER] Consulta recibida desde <ip_cliente>
+[DNS_HANDLER] País detectado: US
+[DNS_HANDLER] Región seleccionada: USA
+[DNS_HANDLER] IP de caché seleccionada: 10.20.1.10
 ```
 
-Si ocurre un error al consultar la API:
+Para un país no incluido en LATAM o USA:
 
 ```text
-[DNS_HANDLER_ERROR] Error llamando a /api/exists: <detalle>. Intentando resolver vía proxy...
+[DNS_HANDLER] Consulta recibida desde <ip_cliente>
+[DNS_HANDLER] País detectado: ES
+[DNS_HANDLER] Región seleccionada: EUROPE
+[DNS_HANDLER] IP de caché seleccionada: 10.30.1.10
 ```
-
-Si el paquete no es estándar:
-
-```text
-[DNS_HANDLER] Paquete no estándar (ID=0x1234, opcode=1): reenviando a /api/dns_resolver
-```
-
-Estos logs ayudan a demostrar que el Interceptor recibe consultas reales, extrae el dominio, consulta la configuración y responde al cliente.
 
 ---
 
 ## Evidencia de pruebas con nslookup
 
-Prueba de dominio configurado:
+Prueba para cliente ubicado en Latinoamérica:
 
 ```bash
-nslookup -port=30053 ejemplo.com 127.0.0.1
+nslookup -port=30053 app.miempresa.com 127.0.0.1
 ```
 
 Resultado esperado:
@@ -889,37 +908,33 @@ Resultado esperado:
 Server:  127.0.0.1
 Address: 127.0.0.1#30053
 
-Name:    ejemplo.com
-Address: 10.0.0.15
+Name:    app.miempresa.com
+Address: 10.10.1.10
 ```
 
 Conclusión:
 
 ```text
-El DNS Interceptor recibió la consulta, procesó el dominio y devolvió una respuesta DNS tipo A con la IP seleccionada por el servicio externo.
+El DNS Interceptor recibió la consulta, obtuvo la IP del cliente, consultó Supabase RPC, detectó la región correspondiente y respondió con la IP de la caché LATAM.
 ```
 
-Prueba de dominio no configurado:
+Prueba con `dig`:
 
 ```bash
-nslookup -port=30053 google.com 127.0.0.1
+dig @127.0.0.1 -p 30053 app.miempresa.com
 ```
 
 Resultado esperado:
 
 ```text
-Server:  127.0.0.1
-Address: 127.0.0.1#30053
-
-Non-authoritative answer:
-Name:    google.com
-Address: <IP devuelta por resolvedor externo>
+;; ANSWER SECTION:
+app.miempresa.com.  300  IN  A  10.10.1.10
 ```
 
 Conclusión:
 
 ```text
-El DNS Interceptor detectó que el dominio no estaba configurado localmente y aplicó el flujo de fallback hacia /api/dns_resolver.
+La respuesta DNS tipo A fue generada correctamente usando la IP regional seleccionada.
 ```
 
 ---
@@ -952,30 +967,11 @@ test result: ok
 
 ---
 
-## Limitaciones actuales
-
-Actualmente el DNS Interceptor tiene algunas limitaciones:
-
-- Solo construye respuestas tipo A.
-- No genera respuestas AAAA para IPv6.
-- No soporta QNAME comprimido en consultas.
-- No implementa caché DNS local.
-- No soporta DNS sobre TCP.
-- No implementa DNSSEC.
-- No genera múltiples respuestas en un mismo paquete.
-- La selección final de la caché se delega al servicio configurado en `DNS_API_URL`.
-
----
-
 ## Explicación de integración con la Zonal Cache en Kubernetes
 
-Dentro de Kubernetes, los componentes se comunican usando los nombres de los Services. Por eso, el DNS Interceptor no debe usar `localhost` para comunicarse con la Zonal Cache, sino el nombre del Service interno.
+Dentro de Kubernetes, los componentes se comunican usando los nombres de los Services y las IPs configuradas para cada región.
 
-Ejemplo:
-
-```text
-http://zonal-cache-service:8080
-```
+El DNS Interceptor no procesa HTTP ni almacena contenido. Su trabajo es responder la consulta DNS con la IP de una caché regional.
 
 El flujo integrado sería:
 
@@ -984,23 +980,19 @@ Cliente DNS
    ↓
 DNS Interceptor
    ↓
-Consulta /api/exists usando domain + client_ip
+Obtiene IP del cliente
    ↓
-Servicio externo selecciona IP final
+Supabase RPC buscar_pais(client_ip)
    ↓
-DNS Interceptor responde con esa IP
+Selecciona región
+   ↓
+Responde con IP de caché regional
    ↓
 Cliente accede al recurso HTTP
    ↓
 Zonal Cache procesa autenticación y caché
-```
-
-En Kubernetes, el DNS Interceptor se despliega con Helm y recibe la URL de la Zonal Cache mediante variable de entorno:
-
-```yaml
-env:
-  - name: DNS_API_URL
-    value: "http://zonal-cache-service:8080"
+   ↓
+Servidor origen
 ```
 
 La integración esperada es:
@@ -1008,12 +1000,12 @@ La integración esperada es:
 ```text
 dns-interceptor
    ↓
-zonal-cache-service
+zonal-cache LATAM / USA / EUROPE
    ↓
 java-rest-api-service / apache-server-service / sitios externos
 ```
 
-Con esto, el DNS Interceptor se encarga de la entrada DNS, mientras que la Zonal Cache se encarga del procesamiento HTTP, autenticación, almacenamiento en disco y consulta al servidor origen.
+Con esto, el DNS Interceptor se encarga de la entrada DNS y la selección regional, mientras que la Zonal Cache se encarga del procesamiento HTTP, autenticación, almacenamiento en disco y consulta al servidor origen.
 
 ---
 

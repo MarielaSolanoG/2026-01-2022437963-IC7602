@@ -71,10 +71,10 @@ async fn auth_middleware(request: Request, next: Next) -> Result<Response, Statu
             }
         }
 
-        let login_url = format!(
-            "http://localhost:5173/auth?domain={}&redirect=http://localhost:8080",
-            domain
-        );
+        let ui_base = env::var("UI_BASE_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+        let redirect = env::var("REDIRECT_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
+
+        let login_url = format!("{}/auth?domain={}&redirect={}", ui_base, domain, redirect);
         return Ok(Redirect::to(&login_url).into_response());
     }
 

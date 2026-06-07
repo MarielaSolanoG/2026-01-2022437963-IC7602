@@ -1,6 +1,7 @@
 mod firebase;
 mod auth;
 mod cache;
+mod cache_core;
 
 use cache::cache_handler;
 use firebase::config::load_config;
@@ -71,7 +72,7 @@ async fn auth_middleware(request: Request, next: Next) -> Result<Response, Statu
             }
         }
 
-        let ui_base = env::var("UI_BASE_URL").unwrap_or_else(|_| "http://localhost:5173".to_string());
+        let ui_base = env::var("UI_BASE_URL").unwrap_or_else(|_| "https://ic7602-p2-ui.vercel.app".to_string());
         let redirect = env::var("REDIRECT_URL").unwrap_or_else(|_| "http://localhost:8080".to_string());
 
         let login_url = format!("{}/auth?domain={}&redirect={}", ui_base, domain, redirect);

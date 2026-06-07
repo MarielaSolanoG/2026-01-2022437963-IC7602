@@ -7,7 +7,7 @@ Variables soportadas:
 
 - `UI_BASE_URL`: URL base de la UI (por defecto `http://localhost:5173`).
 - `REDIRECT_URL`: URL a la que la UI redirige después del login (por defecto `http://localhost:8080`).
-- `CONFIG_API_URL`: URL base de la API de configuración (por defecto `http://localhost:3000`).
+- `CONFIG_API_URL`: URL base de la API de configuración (por defecto `https://2026-01-2022437963-ic-7602.vercel.app`).
 
 Ejemplos (PowerShell):
 

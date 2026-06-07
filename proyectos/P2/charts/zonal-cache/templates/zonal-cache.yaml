@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zonal-cache-latam
+  labels:
+    app: zonal-cache-latam
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zonal-cache-latam
+  template:
+    metadata:
+      labels:
+        app: zonal-cache-latam
+    spec:
+      containers:
+        - name: cache-core
+          image: cortes64/zonal-cache:latest  # Cambia esto si manejas otro tag/nombre de imagen
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DOMAIN
+              value: "latam.tu-proyecto.com"
+            - name: CONFIG_API_URL
+              value: "http://config-api-svc:4000" # URL interna del API de Node/Java si aplica
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zonal-cache-latam-svc   # Coincide exactamente con el string de tu values.yaml
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.100.10
+  ports:
+    - port: 80                  # Puerto expuesto para el clúster
+      targetPort: 3000          # Mapea directamente al EXPOSE 3000 de tu Rust axum
+      protocol: TCP
+  selector:
+    app: zonal-cache-latam
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zonal-cache-usa
+  labels:
+    app: zonal-cache-usa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zonal-cache-usa
+  template:
+    metadata:
+      labels:
+        app: zonal-cache-usa
+    spec:
+      containers:
+        - name: cache-core
+          image: cortes64/zonal-cache:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DOMAIN
+              value: "usa.tu-proyecto.com"
+            - name: CONFIG_API_URL
+              value: "http://config-api-svc:4000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zonal-cache-usa-svc     # Coincide exactamente con el string de tu values.yaml
+spec:
+  type: ClusterIP
+  clusterIP: 10.96.100.20
+  ports:
+    - port: 80                  
+      targetPort: 3000          
+      protocol: TCP
+  selector:
+    app: zonal-cache-usa

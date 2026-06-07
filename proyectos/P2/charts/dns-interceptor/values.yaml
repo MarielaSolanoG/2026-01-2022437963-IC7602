@@ -17,6 +17,5 @@ env:
   supabaseUrl: "dvplejlmeilcwmsuwsdn"
   supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2cGxlamxtZWlsY3dtc3V3c2RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyNzk5NTQsImV4cCI6MjA5MTg1NTk1NH0.WEtmsygYG0RmFNr1FGMdX7wE9CEF8U5iUqINTMTa8CI"
 
-  zonalCacheLatamIp: "zonal-cache-latam-svc.default.svc.cluster.local"
-  zonalCacheUsaIp: "zonal-cache-usa-svc.default.svc.cluster.local"
-  zonalCacheEuropeIp: "zonal-cache-europe-svc.default.svc.cluster.local"
+  zonalCacheLatamIp: "10.96.100.10"
+  zonalCacheUsaIp: "10.96.100.20"

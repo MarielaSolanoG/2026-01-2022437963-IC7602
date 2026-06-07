@@ -6,4 +6,6 @@ helm upgrade --install dns-interceptor dns-interceptor \
   --set env.zonalCacheLatamIp="127.0.0.1" \
   --set env.zonalCacheUsaIp="127.0.0.1" \
   --set env.zonalCacheEuropeIp="127.0.0.1"
+helm upgrade --install java-rest-api java-rest-api
 helm upgrade --install ui ui
+helm upgrade --install zonal-cache zonal-cache  

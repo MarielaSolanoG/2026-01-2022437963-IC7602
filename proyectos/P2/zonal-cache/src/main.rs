@@ -89,17 +89,37 @@ async fn protected_resource() -> &'static str {
 #[tokio::main]
 async fn main() {
     dotenvy::dotenv().ok();
-
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let address = format!("0.0.0.0:{}", port);
 
+    let domain = env::var("DOMAIN").unwrap_or_else(|_| "localhost".to_string());
+    let (tamanio, politica, ttl) = match load_config(&domain).await {
+        Ok(config) => {
+            println!("Config cargada — {}MB, {}, TTL {}s",
+                config.cache_size_mb, config.replacement_policy, config.ttl);
+            let bytes = std::env::var("CACHE_SIZE_BYTES")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or((config.cache_size_mb as u64) * 1024 * 1024);
+            (bytes, config.replacement_policy, 300u64)
+        }
+        Err(e) => {
+            println!("Config no disponible ({}), usando defaults", e);
+            (500 * 1024 * 1024, String::from("LRU"), 300u64)
+        }
+    };
+
+    let estado: cache_core::EstadoCache = std::sync::Arc::new(std::sync::Mutex::new(
+        cache_core::Cache::nuevo(tamanio, cache_core::Politica::desde_string(&politica), ttl)
+    ));
+
     let app = Router::new()
-        .route("/", get(cache_handler))
+        .route("/", get(cache::cache_handler))
+        .with_state(estado)
         .layer(middleware::from_fn(auth_middleware));
 
     let listener = tokio::net::TcpListener::bind(&address).await.unwrap();
-
     println!("Servidor iniciado en http://localhost:{}", port);
-
     axum::serve(listener, app).await.unwrap();
 }
+

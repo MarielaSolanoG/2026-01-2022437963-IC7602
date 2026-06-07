@@ -8,7 +8,7 @@ use crate::firebase::config::load_config;
 use std::path::Path;
 // ── Política de reemplazo ─────────────────────────────────────────────────────
 #[derive(Clone, Debug)]
-enum Politica {
+pub enum Politica {
     FIFO,
     LRU,
     MRU,
@@ -17,7 +17,7 @@ enum Politica {
 }
 
 impl Politica {
-    fn desde_string(s: &str) -> Politica {
+    pub fn desde_string(s: &str) -> Politica {
         match s {
             "LRU"    => Politica::LRU,
             "MRU"    => Politica::MRU,
@@ -40,16 +40,16 @@ struct EntradaCache {
 }
 
 // ── Estado del caché ──────────────────────────────────────────────────────────
-struct Cache {
-    entradas:        HashMap<String, EntradaCache>,
-    tamanio_actual:  u64,
-    tamanio_maximo:  u64,   // en bytes — vendrá de Firebase vía Persona 3
-    politica:        Politica,
-    ttl:           u64, // duración en segundos antes de que una entrada expire
+pub struct Cache {
+    pub entradas:        HashMap<String, EntradaCache>,
+    pub tamanio_actual:  u64,
+    pub tamanio_maximo:  u64,   // en bytes — vendrá de Firebase vía Persona 3
+    pub politica:        Politica,
+    pub ttl:           u64, // duración en segundos antes de que una entrada expire
 }
 
 impl Cache {
-    fn nuevo(tamanio_maximo: u64, politica: Politica, ttl: u64) -> Cache {
+    pub fn nuevo(tamanio_maximo: u64, politica: Politica, ttl: u64) -> Cache {
         Cache {
             entradas: HashMap::new(),
             tamanio_actual: 0,
@@ -173,7 +173,7 @@ impl Cache {
     }
 }
 
-type EstadoCache = Arc<Mutex<Cache>>;
+pub type EstadoCache = Arc<Mutex<Cache>>;
 
 // ── Handler HTTP ──────────────────────────────────────────────────────────────
 #[derive(Deserialize)]
@@ -415,90 +415,47 @@ mod tests {
     }
 }
 pub async fn get_cache(
-    url: String
+    url: String,
+    estado: EstadoCache,
 ) -> String {
-
-    let nombre_archivo =
-        url
-            .replace("http://", "")
-            .replace("https://", "")
-            .replace("/", "_")
-            .replace(":", "_");
-
-    let ruta =
-        format!(
-            "cache_disco/{}",
-            nombre_archivo
-        );
-
     // ===== HIT =====
-    let ttl = 5; 
-
-    if Path::new(&ruta).exists() {
-        let metadata = fs::metadata(&ruta).unwrap();
-
-        if let Ok(modified) = metadata.modified() {
-            if let Ok(elapsed) = modified.elapsed() {
-                if elapsed.as_secs() > ttl {
-                    println!("TTL expirado — eliminando archivo");
-                    let _ = fs::remove_file(&ruta);
-                } else {
-                    println!("HIT — sirviendo desde disco");
-                    return fs::read_to_string(&ruta)
-                        .unwrap_or_else(|_| "Error leyendo caché".to_string());
-                }
-            }
+    {
+        let mut cache = estado.lock().unwrap();
+        if let Some(entrada) = cache.get(&url) {
+            let contenido = fs::read_to_string(&entrada.ruta_en_disco)
+                .unwrap_or_else(|_| "Error leyendo caché".to_string());
+            println!("HIT — sirviendo desde disco: {}", entrada.ruta_en_disco);
+            return contenido;
         }
     }
 
     // ===== MISS =====
-
-    println!(
-        "MISS — buscando en origen: {}",
-        url
-    );
-
-    match reqwest::get(
-        &url
-    )
-    .await {
-
+    println!("MISS — buscando en origen: {}", url);
+    match reqwest::get(&url).await {
         Ok(res) => {
-
             match res.text().await {
-
                 Ok(contenido) => {
+                    fs::create_dir_all("cache_disco").unwrap();
 
-                    fs::create_dir_all(
-                        "cache_disco"
-                    )
-                    .unwrap();
+                    let nombre_archivo = url
+                        .replace("http://", "")
+                        .replace("https://", "")
+                        .replace("/", "_")
+                        .replace(":", "_");
+                    let ruta = format!("cache_disco/{}", nombre_archivo);
 
-                    fs::write(
-                        &ruta,
-                        &contenido
-                    )
-                    .unwrap();
+                    fs::write(&ruta, &contenido).unwrap();
+                    let tamanio = contenido.len() as u64;
+                    println!("Guardado en disco: {} ({} bytes)", ruta, tamanio);
 
-                    println!(
-                        "Guardado en disco: {}",
-                        ruta
-                    );
+                    let mut cache = estado.lock().unwrap();
+                    cache.insertar(url, ruta, tamanio);
 
                     contenido
-
                 }
-
-                Err(_) =>
-                    "Error leyendo respuesta".to_string()
-
+                Err(_) => "Error leyendo respuesta".to_string()
             }
-
         }
-
-        Err(_) =>
-            "Error consultando origen".to_string()
-
+        Err(_) => "Error consultando origen".to_string()
     }
-
 }

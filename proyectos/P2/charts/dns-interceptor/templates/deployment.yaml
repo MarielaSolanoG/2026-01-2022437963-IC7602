@@ -25,5 +25,15 @@ spec:
           env:
             - name: DNS_PORT
               value: {{ .Values.env.dnsPort | quote }}
-            - name: DNS_API_URL
-              value: {{ .Values.env.dnsApiUrl | quote }}
+            
+            - name: SUPABASE_URL
+              value: {{ .Values.env.supabaseUrl | quote }}
+            - name: SUPABASE_KEY
+              value: {{ .Values.env.supabaseKey | quote }}
+            
+            - name: ZONAL_CACHE_LATAM_IP
+              value: {{ .Values.env.zonalCacheLatamIp | quote }}
+            - name: ZONAL_CACHE_USA_IP
+              value: {{ .Values.env.zonalCacheUsaIp | quote }}
+            - name: ZONAL_CACHE_EUROPE_IP
+              value: {{ .Values.env.zonalCacheEuropeIp | quote }}
